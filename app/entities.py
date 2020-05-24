@@ -5,20 +5,24 @@ import random
 
 
 class Player:
-    def __init__(self, user_id, username):
-        self._user_id = user_id
-        self._username = username
-        self._state = PlayerState.active
-        self._cards = []
-        self._money = 0
+    def __init__(self, user_id, mention_markdown):
+        self.user_id = user_id
+        self.mention_markdown = mention_markdown
+        self.state = PlayerState.active
+        self.cards = []
+        self.money = 10000
+        self.round_rait = 0
 
 
 class Game:
     def __init__(self):
+        self.bank = 0
+        self.max_round_rait = 0
         self.state = GameState.initial
-        self.cards = random.shuffle(CARDS)
         self.players = {}
-        self.current_player_index = 0
+        self.current_player_index = -1
+        self.cards = CARDS.copy()
+        random.shuffle(self.cards)
 
 
 class GameState(enum.Enum):

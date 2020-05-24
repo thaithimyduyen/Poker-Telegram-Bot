@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from app.entities import (
     GameState,
     Game,
@@ -40,17 +39,17 @@ class PokerBotModel:
                 message_id=update.effective_message.message_id,
             )
             return
-        username = update.effective_message.from_user.username
-        user_id = update.effective_message.from_user.id
 
-        game.players[user_id] = Player(
-            user_id=user_id,
-            username=username
+        user = update.effective_message.from_user
+
+        game.players[user.id] = Player(
+            user_id=user.id,
+            mention_markdown=user.mention_markdown(),
         )
 
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
-            text=f"`@{username}` is ready"
+            text=f"{user.mention_markdown()} is ready"
         )
 
     def start(self, update, context):
@@ -76,9 +75,16 @@ class PokerBotModel:
             )
             return
 
+        game.state = GameState.round_pre_flop
+        self._divide_card(game)
+
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
             text="*Game is created!!*"
+        )
+        self._process_playing(
+            chat_id=update.effective_message.chat_id,
+            game=game,
         )
 
     def _check_access(self, chat_id, user_id):
@@ -87,3 +93,64 @@ class PokerBotModel:
             if m.user.id == user_id:
                 return True
         return False
+
+    def _divide_card(self, game):
+        for player in game.players.values():
+            player.cards = [game.cards.pop(), game.cards.pop()]
+
+    def _current_player(self, game):
+        return list(game.players.values())[game.current_player_index]
+
+    def _process_playing(self, chat_id, game):
+        game.current_player_index += 1
+        current_player = self._current_player(game)
+        mention_markdown = current_player.mention_markdown
+        cards = current_player.cards
+        self._view.send_message_with_cards(
+            chat_id=chat_id,
+            text=f"{mention_markdown} your turn",
+            cards=cards,
+        )
+
+    def _goto_next_round(self):
+        pass
+
+    def _finish(self):
+        pass
+
+    def fold(self, update, context):
+        pass
+
+    def middleware_user_turn(self, fn):
+        def m(update, context):
+            game = self._game_from_context(context)
+            current_player = self._current_player(game)
+            user_id_current = update.effective_message.from_user.id
+            if user_id_current != current_player.user_id:
+                self._view.send_message_reply(
+                    chat_id=update.effective_message.chat_id,
+                    text="It's not your turn"
+                )
+                return
+
+            fn(update, context)
+
+        return m
+
+    def check(self, update, context):
+        game = self._game_from_context(context)
+        self._view.send_message(
+            chat_id=update.effective_message.chat_id,
+            text=f"{self._current_player(game).mention_markdown} was checked"
+        )
+
+        self._process_playing(
+            chat_id=update.effective_message.chat_id,
+            game=game,
+        )
+
+    def raise_rait(self, update, context):
+        pass
+
+    def all_in(self, update, context):
+        pass
