@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import os
-from app.entities import (
-    GameState,
-    Game,
-    Player,
-)
+
+from telegram import Update, Bot
+from telegram.ext import Handler, CallbackContext
+
+from app.entities import Game, GameState, Player, ChatId, UserId
+from app.pokerbotview import PokerBotViewer
 
 
 KEY_CHAT_DATA_GAME = "game"
@@ -14,16 +15,16 @@ MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 
 
 class PokerBotModel:
-    def __init__(self, view, bot):
+    def __init__(self, view: PokerBotViewer, bot: Bot):
         self._view = view
         self._bot = bot
 
-    def _game_from_context(self, context) -> Game:
+    def _game_from_context(self, context: CallbackContext) -> Game:
         if KEY_CHAT_DATA_GAME not in context.chat_data:
             context.chat_data[KEY_CHAT_DATA_GAME] = Game()
         return context.chat_data[KEY_CHAT_DATA_GAME]
 
-    def ready(self, update, context):
+    def ready(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
 
         if game.state != GameState.initial:
@@ -34,7 +35,7 @@ class PokerBotModel:
             )
             return
 
-        if len(game.players) > MAX_PLAYERS:
+        if len(game.active_players) > MAX_PLAYERS:
             self._view.send_message_reply(
                 chat_id=update.effective_message.chat_id,
                 text="The room is full",
@@ -44,7 +45,7 @@ class PokerBotModel:
 
         user = update.effective_message.from_user
 
-        game.players[user.id] = Player(
+        game.active_players[user.id] = Player(
             user_id=user.id,
             mention_markdown=user.mention_markdown(),
         )
@@ -54,53 +55,46 @@ class PokerBotModel:
             text=f"{user.mention_markdown()} is ready"
         )
 
-    def start(self, update, context):
+    def start(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
 
+        chat_id = update.effective_message.chat_id
+        message_id = update.effective_message.message_id
         has_access = self._check_access(
-            chat_id=update.effective_message.chat_id,
+            chat_id=chat_id,
             user_id=update.effective_message.from_user.id,
         )
         if not has_access:
             self._view.send_message_reply(
-                chat_id=update.effective_message.chat_id,
+                chat_id=chat_id,
                 text="👾 *Denied!* 👾",
-                message_id=update.effective_message.message_id,
+                message_id=message_id,
             )
             return
 
-        if len(game.players) < MIN_PLAYERS:
+        if len(game.active_players) < MIN_PLAYERS:
             self._view.send_message_reply(
-                chat_id=update.effective_message.chat_id,
-                text="Not enough player",
-                message_id=update.effective_message.message_id,
+                chat_id=chat_id,
+                text="Not enough players",
+                message_id=message_id,
             )
             return
 
         game.state = GameState.round_pre_flop
-        self._divide_cards(
-            game=game,
-            chat_id=update.effective_message.chat_id,
-        )
+        self._divide_cards(game=game, chat_id=chat_id,)
 
-        self._view.send_message(
-            chat_id=update.effective_message.chat_id,
-            text="*Game is created!!*"
-        )
-        self._process_playing(
-            chat_id=update.effective_message.chat_id,
-            game=game,
-        )
+        self._view.send_message(chat_id=chat_id, text="*Game is created!!*")
+        self._process_playing(chat_id=chat_id, game=game)
 
-    def _check_access(self, chat_id, user_id):
+    def _check_access(self, chat_id: ChatId, user_id: UserId) -> bool:
         chat_admins = self._bot.get_chat_administrators(chat_id)
         for m in chat_admins:
             if m.user.id == user_id:
                 return True
         return False
 
-    def _divide_cards(self, game, chat_id):
-        for player in game.players.values():
+    def _divide_cards(self, game: Game, chat_id: ChatId) -> None:
+        for player in game.active_players.values():
             cards = player.cards = [
                 game.remain_cards.pop(),
                 game.remain_cards.pop(),
@@ -111,33 +105,38 @@ class PokerBotModel:
                 mention_markdown=player.mention_markdown,
             )
 
-    def _current_player(self, game):
-        return list(game.players.values())[game.current_player_index]
+    def _current_player(self, game: Game) -> Player:
+        i = game.current_player_index % len(game.active_players)
+        return list(game.active_players.values())[i]
 
-    def _process_playing(self, chat_id, game):
-        players_count = len(game.players)
-        game.current_player_index += 1
-        if game.current_player_index > (players_count - 1):
-            self._goto_next_round(game, chat_id)
+    def _process_playing(self, chat_id: ChatId, game: Game) -> None:
+        if len(game.active_players) == 1:
+            self._finish(game, chat_id)
             return
+
+        if game.current_player_index == len(game.active_players) - 1:
+            self._goto_next_round(game, chat_id)
+
+        if game.state == GameState.finished:
+            return
+
+        game.current_player_index += 1
+        game.current_player_index %= len(game.active_players)
+
         current_player = self._current_player(game)
-        mention_markdown = current_player.mention_markdown
-        if len(game.cards_table) == 0:
-            cards_table = "no cards"
-        else:
-            cards_table = " ".join(game.cards_table)
-        player_money = current_player.money
-        bank = game.bank
-        self._view.extend_with_turn_actions(
+        self._view.send_turn_actions(
             chat_id=chat_id,
-            text=f"{mention_markdown} It is your turn\n" +
-            f"Cards on the table: {cards_table}\n" +
-            f"Your money: *{player_money}$*\n " +
-            f"Bank: *{bank}$*",
+            game=game,
+            player=current_player,
         )
 
-    def add_cards_to_table(self, cards_count, game, chat_id):
-        for _ in range(cards_count):
+    def add_cards_to_table(
+        self,
+        count: int,
+        game: Game,
+        chat_id: ChatId,
+    ) -> None:
+        for _ in range(count):
             game.cards_table.append(game.remain_cards.pop())
 
         cards_table = " ".join(game.cards_table)
@@ -146,64 +145,76 @@ class PokerBotModel:
             text=f"Cards are added to table: {cards_table}"
         )
 
-    def _finish(self, game, chat_id):
-        pass
+    def _finish(self, game: Game, chat_id: ChatId) -> None:
+        self._view.send_message(
+            chat_id=chat_id,
+            text=f"Finished"
+        )
 
-    def _goto_next_round(self, game, chat_id):
-        game.current_player_index = -1
-        if len(game.players) == 0:
-            self._finish(game, chat_id)
-
-        elif game.state == GameState.round_pre_flop:
-            game.state = GameState.round_flop
-            self.add_cards_to_table(
-                cards_count=3,
+    def _goto_next_round(self, game: Game, chat_id: ChatId) -> bool:
+        def add_cards(cards_count):
+            return self.add_cards_to_table(
+                count=cards_count,
                 game=game,
-                chat_id=chat_id,
+                chat_id=chat_id
             )
 
-        elif game.state == GameState.round_flop:
-            game.state = GameState.round_turn
-            self.add_cards_to_table(
-                cards_count=1,
-                game=game,
-                chat_id=chat_id,
-            )
+        state_transitions = {
+            GameState.round_pre_flop: {
+                "next_state": GameState.round_flop,
+                "processor": lambda: add_cards(3),
+            },
+            GameState.round_flop: {
+                "next_state": GameState.round_turn,
+                "processor": lambda: add_cards(1),
+            },
+            GameState.round_turn: {
+                "next_state": GameState.round_river,
+                "processor": lambda: add_cards(1),
+            },
+            GameState.round_river: {
+                "next_state": GameState.finished,
+                "processor": lambda: self._finish(game, chat_id),
+            }
+        }
 
-        elif game.state == GameState.round_turn:
-            game.state = GameState.round_river
-            self.add_cards_to_table(
-                cards_count=1,
-                game=game,
-                chat_id=chat_id,
-            )
+        if game.state not in state_transitions:
+            raise Exception("unexpected state: " + game.state.value)
 
-        elif game.state == GameState.round_river:
-            self._finish(game, chat_id)
-            return
+        transation = state_transitions[game.state]
+        game.state = transation["next_state"]
+        transation["processor"]()
 
-        self._process_playing(chat_id, game)
-
-    def fold(self, update, context):
-        pass
-
-    def middleware_user_turn(self, fn):
+    def middleware_user_turn(self, fn: Handler) -> Handler:
         def m(update, context):
             game = self._game_from_context(context)
             current_player = self._current_player(game)
-            user_id_current = update.effective_message.from_user.id
-            if user_id_current != current_player.user_id:
-                self._view.send_message_reply(
-                    chat_id=update.effective_message.chat_id,
-                    text="It's not your turn"
-                )
+            current_user_id = update.callback_query.from_user.id
+            if current_user_id != current_player.user_id:
                 return
 
             fn(update, context)
 
         return m
 
-    def check(self, update, context):
+    def fold(self, update: Update, context: CallbackContext) -> None:
+        game = self._game_from_context(context)
+        self._view.send_message(
+            chat_id=update.effective_message.chat_id,
+            text=f"{self._current_player(game).mention_markdown} was folded"
+        )
+        player_id = update.callback_query.from_user.id
+        game.bank += game.active_players[player_id].round_rate
+
+        del game.active_players[player_id]
+        game.current_player_index -= 1
+
+        self._process_playing(
+            chat_id=update.effective_message.chat_id,
+            game=game,
+        )
+
+    def check(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
@@ -215,8 +226,8 @@ class PokerBotModel:
             game=game,
         )
 
-    def raise_rate(self, update, context):
+    def raise_rate(self, update: Update, context: CallbackContext) -> None:
         pass
 
-    def all_in(self, update, context):
+    def all_in(self, update: Update, context: CallbackContext) -> None:
         pass

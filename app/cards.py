@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# TODO: Add function get_cards(). It should create shuffled copy of cards.
 CARDS = [
     "2♥️", "3♥️", "4♥️", "5♥️",
     "6♥️", "7♥️", "8♥️", "9♥️",

@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 
 
-def main():
+def main() -> None:
     with open(TOKEN_FILE, 'r') as f:
         token = f.read()
     bot = PokerBot(token=token)

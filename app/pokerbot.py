@@ -12,8 +12,8 @@ from app.pokerbotview import PokerBotViewer
 class PokerBot:
     def __init__(
         self,
-        token,
-        proxy_url="socks5://192.168.31.110:9100"
+        token: str,
+        proxy_url: str = "socks5://192.168.31.110:9100"
     ):
         req = Request(proxy_url=proxy_url, con_pool_size=8)
         bot = Bot(token=token, request=req)
@@ -25,5 +25,5 @@ class PokerBot:
         )
         self._controller = PokerBotCotroller(self._model, self._updater)
 
-    def run(self):
+    def run(self) -> None:
         self._updater.start_polling()
