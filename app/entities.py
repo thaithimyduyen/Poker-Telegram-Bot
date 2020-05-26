@@ -10,7 +10,7 @@ class Player:
         self.mention_markdown = mention_markdown
         self.state = PlayerState.active
         self.cards = []
-        self.money = 10000
+        self.money = 100
         self.round_rait = 0
 
 
@@ -21,8 +21,9 @@ class Game:
         self.state = GameState.initial
         self.players = {}
         self.current_player_index = -1
-        self.cards = CARDS.copy()
-        random.shuffle(self.cards)
+        self.cards_table = []
+        self.remain_cards = CARDS.copy()
+        random.shuffle(self.remain_cards)
 
 
 class GameState(enum.Enum):
@@ -37,3 +38,10 @@ class GameState(enum.Enum):
 class PlayerState(enum.Enum):
     active = True
     lose = False
+
+
+class PlayerAction(enum.Enum):
+    check = "check"
+    fold = "fold"
+    raise_rate = "raise_rate"
+    all_in = "all_in"

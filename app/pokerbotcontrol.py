@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 from telegram.ext import (
-    CommandHandler,
+    CommandHandler, CallbackQueryHandler
 )
+from app.entities import PlayerAction
 
 
 class PokerBotCotroller:
@@ -20,6 +21,9 @@ class PokerBotCotroller:
         updater.dispatcher.add_handler(
             CommandHandler('check', m(self._handle_check))
         )
+        updater.dispatcher.add_handler(
+            CallbackQueryHandler(self._handle_button_clicked)
+        )
 
     def _handle_ready(self, update, context):
         self._model.ready(update, context)
@@ -29,3 +33,14 @@ class PokerBotCotroller:
 
     def _handle_check(self, update, context):
         self._model.check(update, context)
+
+    def _handle_button_clicked(self, update, context):
+        query_data = update.callback_query.data
+        if query_data == PlayerAction.check.value:
+            self._model.check(update, context)
+        elif query_data == PlayerAction.fold.value:
+            self._model.fold(update, context)
+        elif query_data == PlayerAction.raise_rate.value:
+            self._model.raise_rate(update, context)
+        elif query_data == PlayerAction.all_in.value:
+            self._model.all_in(update, context)

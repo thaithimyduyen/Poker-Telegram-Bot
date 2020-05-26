@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+import os
 from app.entities import (
     GameState,
     Game,
@@ -8,7 +10,7 @@ from app.entities import (
 
 KEY_CHAT_DATA_GAME = "game"
 MAX_PLAYERS = 8
-MIN_PLAYERS = 2
+MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 
 
 class PokerBotModel:
@@ -76,7 +78,10 @@ class PokerBotModel:
             return
 
         game.state = GameState.round_pre_flop
-        self._divide_card(game)
+        self._divide_cards(
+            game=game,
+            chat_id=update.effective_message.chat_id,
+        )
 
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
@@ -94,29 +99,90 @@ class PokerBotModel:
                 return True
         return False
 
-    def _divide_card(self, game):
+    def _divide_cards(self, game, chat_id):
         for player in game.players.values():
-            player.cards = [game.cards.pop(), game.cards.pop()]
+            cards = player.cards = [
+                game.remain_cards.pop(),
+                game.remain_cards.pop(),
+            ]
+            self._view.send_cards(
+                chat_id=chat_id,
+                cards=cards,
+                mention_markdown=player.mention_markdown,
+            )
 
     def _current_player(self, game):
         return list(game.players.values())[game.current_player_index]
 
     def _process_playing(self, chat_id, game):
+        players_count = len(game.players)
         game.current_player_index += 1
+        if game.current_player_index > (players_count - 1):
+            self._goto_next_round(game, chat_id)
+            return
         current_player = self._current_player(game)
         mention_markdown = current_player.mention_markdown
-        cards = current_player.cards
-        self._view.send_message_with_cards(
+        if len(game.cards_table) == 0:
+            cards_table = "no cards"
+        else:
+            cards_table = " ".join(game.cards_table)
+        player_money = current_player.money
+        bank = game.bank
+        self._view.extend_with_turn_actions(
             chat_id=chat_id,
-            text=f"{mention_markdown} your turn",
-            cards=cards,
+            text=f"{mention_markdown} It is your turn\n" +
+            f"Cards on the table: {cards_table}\n" +
+            f"Your money: *{player_money}$*\n " +
+            f"Bank: *{bank}$*",
         )
 
-    def _goto_next_round(self):
+    def add_cards_to_table(self, cards_count, game, chat_id):
+        for _ in range(cards_count):
+            game.cards_table.append(game.remain_cards.pop())
+
+        cards_table = " ".join(game.cards_table)
+        self._view.send_message(
+            chat_id=chat_id,
+            text=f"Cards are added to table: {cards_table}"
+        )
+
+    def _finish(self, game, chat_id):
         pass
 
-    def _finish(self):
-        pass
+    def _goto_next_round(self, game, chat_id):
+        game.current_player_index = -1
+        if len(game.players) == 0:
+            self._finish(game, chat_id)
+
+        elif game.state == GameState.round_pre_flop:
+            game.state = GameState.round_flop
+            self.add_cards_to_table(
+                cards_count=3,
+                game=game,
+                chat_id=chat_id,
+            )
+
+        elif game.state == GameState.round_flop:
+            game.state = GameState.round_turn
+            self.add_cards_to_table(
+                cards_count=1,
+                game=game,
+                chat_id=chat_id,
+            )
+
+        elif game.state == GameState.round_turn:
+            game.state = GameState.round_river
+            self.add_cards_to_table(
+                cards_count=1,
+                game=game,
+                chat_id=chat_id,
+            )
+
+        elif game.state == GameState.round_river:
+            self._finish(game, chat_id)
+            return
+
+        self._process_playing(chat_id, game)
 
     def fold(self, update, context):
         pass
@@ -149,7 +215,7 @@ class PokerBotModel:
             game=game,
         )
 
-    def raise_rait(self, update, context):
+    def raise_rate(self, update, context):
         pass
 
     def all_in(self, update, context):
