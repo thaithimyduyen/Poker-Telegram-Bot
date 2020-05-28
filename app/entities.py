@@ -24,13 +24,15 @@ class Player:
 
 class Game:
     def __init__(self):
-        self.bank = 0
+        self.pot = 0
         self.max_round_rate = 0
         self.state = GameState.initial
-        self.active_players = {}
+        self.active_players = []
         self.cards_table = []
         self.current_player_index = -1
         self.remain_cards = CARDS.copy()
+        self.trading_end_user_id = 0
+        self.ready_players = set()
         random.shuffle(self.remain_cards)
 
 
@@ -45,6 +47,12 @@ class GameState(enum.Enum):
 
 class PlayerAction(enum.Enum):
     check = "check"
+    call = "call"
     fold = "fold"
     raise_rate = "raise_rate"
+    bet = "bet"
     all_in = "all_in"
+
+
+class UserException(Exception):
+    pass

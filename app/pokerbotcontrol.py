@@ -46,10 +46,15 @@ class PokerBotCotroller:
     ) -> None:
         query_data = update.callback_query.data
         if query_data == PlayerAction.check.value:
-            self._model.check(update, context)
+            self._model.call_check(update, context, PlayerAction.check.value)
+        elif query_data == PlayerAction.call.value:
+            self._model.call_check(update, context, PlayerAction.call.value)
         elif query_data == PlayerAction.fold.value:
             self._model.fold(update, context)
         elif query_data == PlayerAction.raise_rate.value:
-            self._model.raise_rate(update, context)
+            self._model.raise_rate_bet(
+                update, context, PlayerAction.raise_rate.value)
+        elif query_data == PlayerAction.bet.value:
+            self._model.raise_rate_bet(update, context, PlayerAction.bet.value)
         elif query_data == PlayerAction.all_in.value:
             self._model.all_in(update, context)

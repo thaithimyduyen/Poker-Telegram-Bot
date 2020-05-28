@@ -53,25 +53,23 @@ class PokerBotViewer:
         )
 
     @staticmethod
-    def _get_turns_markup() -> InlineKeyboardMarkup:
+    def _get_turns_markup(change_action: list) -> InlineKeyboardMarkup:
         keyboard = [[
-            InlineKeyboardButton(
-                text=PlayerAction.check.value,
-                callback_data=PlayerAction.check.value
-            ),
             InlineKeyboardButton(
                 text=PlayerAction.fold.value,
                 callback_data=PlayerAction.fold.value
-            ),
-            InlineKeyboardButton(
-                text=PlayerAction.raise_rate.value,
-                callback_data=PlayerAction.raise_rate.value
             ),
             InlineKeyboardButton(
                 text=PlayerAction.all_in.value,
                 callback_data=PlayerAction.all_in.value
             )
         ]]
+        for action in change_action:
+            keyboard.append([InlineKeyboardButton(
+                text=action,
+                callback_data=action
+            )])
+
         return InlineKeyboardMarkup(
             inline_keyboard=keyboard
         )
@@ -90,6 +88,13 @@ class PokerBotViewer:
             parse_mode=ParseMode.MARKDOWN
         ).message_id
 
+    @staticmethod
+    def define_change_action(game: Game, player: Player):
+        if player.round_rate == game.max_round_rate:
+            return [PlayerAction.check.value, PlayerAction.bet.value]
+        else:
+            return [PlayerAction.call.value, PlayerAction.raise_rate.value]
+
     def send_turn_actions(
             self,
             chat_id: ChatId,
@@ -103,17 +108,18 @@ class PokerBotViewer:
 
         text = (
             "{}, it is your turn\n" +
-            "Cards on the table: {}\n" +
+            "Cards on the table: \n" +
+            "{}\n" +
             "Your money: *{}$*\n " +
-            "Bank: *{}$*"
+            "Max round rate: *{}$*"
         ).format(
             player.mention_markdown,
             cards_table,
             player.money,
-            game.bank,
+            game.max_round_rate,
         )
-
-        markup = PokerBotViewer._get_turns_markup()
+        change_action = PokerBotViewer.define_change_action(game, player)
+        markup = PokerBotViewer._get_turns_markup(change_action)
         return self._bot.send_message(
             chat_id=chat_id,
             text=text,

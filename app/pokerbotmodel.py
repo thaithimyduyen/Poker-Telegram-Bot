@@ -4,20 +4,30 @@ import os
 
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
-
-from app.entities import Game, GameState, Player, ChatId, UserId
+from winnerdetermination import WinnerDetermination
+from app.entities import (
+    Game,
+    GameState,
+    Player,
+    ChatId,
+    UserId,
+    UserException,
+)
 from app.pokerbotview import PokerBotViewer
 
 
 KEY_CHAT_DATA_GAME = "game"
 MAX_PLAYERS = 8
 MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
+SMALL_BLIND = 5
+RAISE_RATE = 10
 
 
 class PokerBotModel:
     def __init__(self, view: PokerBotViewer, bot: Bot):
         self._view = view
         self._bot = bot
+        self._round_rate = RoundRateModel()
 
     def _game_from_context(self, context: CallbackContext) -> Game:
         if KEY_CHAT_DATA_GAME not in context.chat_data:
@@ -45,10 +55,20 @@ class PokerBotModel:
 
         user = update.effective_message.from_user
 
-        game.active_players[user.id] = Player(
+        if user.id in game.ready_players:
+            self._view.send_message_reply(
+                chat_id=update.effective_message.chat_id,
+                message_id=update.effective_message.message_id,
+                text="You has already been ready"
+            )
+            return
+
+        game.ready_players.add(user.id)
+
+        game.active_players.append(Player(
             user_id=user.id,
             mention_markdown=user.mention_markdown(),
-        )
+        ))
 
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
@@ -82,9 +102,12 @@ class PokerBotModel:
 
         game.state = GameState.round_pre_flop
         self._divide_cards(game=game, chat_id=chat_id,)
-
         self._view.send_message(chat_id=chat_id, text="*Game is created!!*")
+
+        game.current_player_index = 1
+        self._round_rate.round_pre_flop_rate_before_first_turn(game)
         self._process_playing(chat_id=chat_id, game=game)
+        self._round_rate.round_pre_flop_rate_after_first_turn(game)
 
     def _check_access(self, chat_id: ChatId, user_id: UserId) -> bool:
         chat_admins = self._bot.get_chat_administrators(chat_id)
@@ -94,7 +117,7 @@ class PokerBotModel:
         return False
 
     def _divide_cards(self, game: Game, chat_id: ChatId) -> None:
-        for player in game.active_players.values():
+        for player in game.active_players:
             cards = player.cards = [
                 game.remain_cards.pop(),
                 game.remain_cards.pop(),
@@ -107,27 +130,29 @@ class PokerBotModel:
 
     def _current_player(self, game: Game) -> Player:
         i = game.current_player_index % len(game.active_players)
-        return list(game.active_players.values())[i]
+        return game.active_players[i]
 
     def _process_playing(self, chat_id: ChatId, game: Game) -> None:
         if len(game.active_players) == 1:
             self._finish(game, chat_id)
             return
 
-        if game.current_player_index == len(game.active_players) - 1:
+        game.current_player_index += 1
+        game.current_player_index %= len(game.active_players)
+
+        if self._current_player(game).user_id == game.trading_end_user_id:
+            self._round_rate.to_pot(game)
             self._goto_next_round(game, chat_id)
+            game.current_player_index = 0
 
         if game.state == GameState.finished:
             return
 
-        game.current_player_index += 1
-        game.current_player_index %= len(game.active_players)
-
-        current_player = self._current_player(game)
+        player = self._current_player(game)
         self._view.send_turn_actions(
             chat_id=chat_id,
             game=game,
-            player=current_player,
+            player=player,
         )
 
     def add_cards_to_table(
@@ -142,14 +167,24 @@ class PokerBotModel:
         cards_table = " ".join(game.cards_table)
         self._view.send_message(
             chat_id=chat_id,
-            text=f"Cards are added to table: {cards_table}"
+            text="*Cards are added to table:*\n" +
+            f"{cards_table}\n" +
+            f"*Current_pot:* {game.pot} $"
         )
 
     def _finish(self, game: Game, chat_id: ChatId) -> None:
+        card_table = game.cards_table
+        for player in game.active_players:
+            player_all_cards = player.cards + card_table
+            all_cards_all_players = {
+                player.user_id: player_all_cards
+            }
+        WinnerDetermination(all_cards_all_players)
         self._view.send_message(
             chat_id=chat_id,
             text=f"Finished"
         )
+        # TODO: Clear game.
 
     def _goto_next_round(self, game: Game, chat_id: ChatId) -> bool:
         def add_cards(cards_count):
@@ -199,14 +234,15 @@ class PokerBotModel:
 
     def fold(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
+
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
-            text=f"{self._current_player(game).mention_markdown} was folded"
+            text=f"{self._current_player(game).mention_markdown} folded"
         )
-        player_id = update.callback_query.from_user.id
-        game.bank += game.active_players[player_id].round_rate
 
-        del game.active_players[player_id]
+        game.pot += self._current_player(game).round_rate
+
+        del game.active_players[game.current_player_index]
         game.current_player_index -= 1
 
         self._process_playing(
@@ -214,20 +250,94 @@ class PokerBotModel:
             game=game,
         )
 
-    def check(self, update: Update, context: CallbackContext) -> None:
+    # TODO: check/call.
+    def call_check(
+        self,
+        update: Update,
+        context: CallbackContext,
+        action: str
+    ) -> None:
         game = self._game_from_context(context)
+        chat_id = update.effective_message.chat_id
+        player = self._current_player(game)
         self._view.send_message(
-            chat_id=update.effective_message.chat_id,
-            text=f"{self._current_player(game).mention_markdown} was checked"
+            chat_id=chat_id,
+            text=f"{self._current_player(game).mention_markdown} {action}"
         )
+        try:
+            self._round_rate.call_check(game, player)
+        except UserException as e:
+            self._view.send_message(chat_id=chat_id, text=str(e))
+            return
 
         self._process_playing(
-            chat_id=update.effective_message.chat_id,
+            chat_id=chat_id,
             game=game,
         )
 
-    def raise_rate(self, update: Update, context: CallbackContext) -> None:
-        pass
+    # TODO: raise/bet rate.
+    def raise_rate_bet(
+        self,
+        update: Update,
+        context: CallbackContext,
+        action: str
+    ) -> None:
+        game = self._game_from_context(context)
+
+        chat_id = update.effective_message.chat_id
+        self._view.send_message(
+            chat_id=chat_id,
+            text=f"{self._current_player(game).mention_markdown}" +
+            f" {action} {RAISE_RATE} $"
+        )
+
+        player = self._current_player(game)
+
+        try:
+            self._round_rate.raise_rate_bet(game, player, RAISE_RATE)
+        except UserException as e:
+            self._view.send_message(chat_id=chat_id, text=str(e))
+            return
+
+        self._process_playing(chat_id=chat_id, game=game)
 
     def all_in(self, update: Update, context: CallbackContext) -> None:
         pass
+
+
+class RoundRateModel:
+    def round_pre_flop_rate_before_first_turn(self, game):
+        self.raise_rate_bet(game, game.active_players[0], SMALL_BLIND)
+        self.raise_rate_bet(game, game.active_players[1], SMALL_BLIND)
+
+    def round_pre_flop_rate_after_first_turn(self, game):
+        dealer = 2 % len(game.active_players)
+        game.trading_end_user_id = game.active_players[dealer].user_id
+
+    def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
+        amount += game.max_round_rate - player.round_rate
+
+        if amount > player.money:
+            raise UserException("not enough money")
+
+        player.money -= amount
+        player.round_rate += amount
+
+        game.max_round_rate = player.round_rate
+        game.trading_end_user_id = player.user_id
+
+    def call_check(self, game, player) -> None:
+        amount = game.max_round_rate - player.round_rate
+
+        if amount > player.money:
+            raise UserException("not enough money")
+
+        player.money -= amount
+        player.round_rate += amount
+
+    def to_pot(self, game) -> None:
+        for p in game.active_players:
+            game.pot += p.round_rate
+            p.round_rate = 0
+        game.max_round_rate = 0
+        game.trading_end_user_id = game.active_players[0].user_id
