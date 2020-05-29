@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from app.entities import Card
+from app.entities import Card, Cards
 from itertools import combinations
 import enum
 
@@ -28,7 +28,7 @@ class WinnerDetermination:
         hands = list(combinations(cards, 5))
         return hands
 
-    def _calculate_hand_point(self, hand) -> int:
+    def _calculate_hand_point(self, hand: Cards) -> int:
         if self.check_royal_flush(hand) != 0:
             return self.check_royal_flush(hand)
         elif self.check_straight_flush(hand) != 0:
