@@ -4,7 +4,7 @@ import os
 
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
-from winnerdetermination import WinnerDetermination
+from app.winnerdetermination import WinnerDetermination
 from app.entities import (
     Game,
     GameState,
@@ -28,6 +28,7 @@ class PokerBotModel:
         self._view = view
         self._bot = bot
         self._round_rate = RoundRateModel()
+        self._winner_determine = WinnerDetermination()
 
     def _game_from_context(self, context: CallbackContext) -> Game:
         if KEY_CHAT_DATA_GAME not in context.chat_data:
@@ -169,20 +170,32 @@ class PokerBotModel:
             chat_id=chat_id,
             text="*Cards are added to table:*\n" +
             f"{cards_table}\n" +
-            f"*Current_pot:* {game.pot} $"
+            f"*Current_pot:* {game.pot}$"
         )
 
     def _finish(self, game: Game, chat_id: ChatId) -> None:
-        card_table = game.cards_table
+        text = "Game is finished with result:\n\n"
         for player in game.active_players:
-            player_all_cards = player.cards + card_table
+            player_all_cards = player.cards + game.cards_table
             all_cards_all_players = {
-                player.user_id: player_all_cards
+                player: player_all_cards
             }
-        WinnerDetermination(all_cards_all_players)
+        print(all_cards_all_players)
+        winners = self._winner_determine.determine_winner(
+            all_cards_all_players)
+        win_hands, win_players = winners
+        for win_hand in win_hands:
+            player.win_hand = win_hand
+
+        self._round_rate.finish_rate(game, win_players)
+        for player in win_players:
+            text += (f"{player.mention_markdown}:\n" +
+                     f"GET: *{player.win_rate} $*\n" +
+                     f"With combination of cards:\n" +
+                     f"{player.win_hand}\n\n")
         self._view.send_message(
             chat_id=chat_id,
-            text=f"Finished"
+            text=text
         )
         # TODO: Clear game.
 
@@ -250,7 +263,6 @@ class PokerBotModel:
             game=game,
         )
 
-    # TODO: check/call.
     def call_check(
         self,
         update: Update,
@@ -275,7 +287,6 @@ class PokerBotModel:
             game=game,
         )
 
-    # TODO: raise/bet rate.
     def raise_rate_bet(
         self,
         update: Update,
@@ -334,6 +345,12 @@ class RoundRateModel:
 
         player.money -= amount
         player.round_rate += amount
+
+    def finish_rate(self, game: Game, win_players) -> None:
+        for win_player in win_players:
+            win_get_rate = game.pot // len(win_players)
+            win_player.money += win_get_rate
+            win_player.win_rate = win_get_rate
 
     def to_pot(self, game) -> None:
         for p in game.active_players:

@@ -4,13 +4,14 @@ import random
 
 from typing import List
 
-from app.cards import CARDS
+from app.cards import CARDS, Card
 
-Cards = List[str]
 MessageId = str
 ChatId = str
 UserId = str
 Mention = str
+
+Cards = List[Card]
 
 
 class Player:
@@ -20,6 +21,8 @@ class Player:
         self.cards = []
         self.money = 100
         self.round_rate = 0
+        self.win_rate = 0
+        self.win_hand = 0
 
 
 class Game:
