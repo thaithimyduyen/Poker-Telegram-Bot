@@ -4,11 +4,15 @@
 # TODO: Add function get_cards(). It should create shuffled copy of cards.
 class Card(str):
     @property
-    def suit(self):
-        return self[1]
+    def suit(self) -> str:
+        return self[-2:]
 
     @property
-    def value(self):
+    def rank(self) -> str:
+        return self[:-2]
+
+    @property
+    def value(self) -> str:
         if self[0] == "J":
             return 11
         elif self[0] == "Q":
@@ -17,7 +21,7 @@ class Card(str):
             return 13
         elif self[0] == "A":
             return 14
-        return int(self[0])
+        return int(self[:-2])
 
 
 CARDS = [
