@@ -11,16 +11,16 @@ CONST_POKER = 15**5
 
 
 class HandsOfPoker(enum.Enum):
-    Royal_flush: 10
-    Straight_flush: 9
-    Four_of_a_kind: 8
-    Full_house: 7
-    Flush: 6
-    Straight: 5
-    Three_of_a_kind: 4
-    Two_pair: 3
-    Pair: 2
-    High_Card: 1
+    Royal_flush = 10
+    Straight_flush = 9
+    Four_of_a_kind = 8
+    Full_house = 7
+    Flush = 6
+    Straights = 5
+    Three_of_a_kind = 4
+    Two_pair = 3
+    Pair = 2
+    High_Card = 1
 
 
 class WinnerDetermination:
@@ -107,8 +107,8 @@ class WinnerDetermination:
         hand_suit = set(self.make_suit(hand))
         if len(hand_value) < 5:
             return point
-        min_pos = dict_cards_order[hand_value[0]]
-        max_pos = dict_cards_order[hand_value[4]]
+        min_pos = hand_value[0]
+        max_pos = hand_value[4]
         delta_pos = max_pos - min_pos
         if len(hand_suit) == 1 and delta_pos == 4:
             point = (CONST_POKER *
@@ -127,10 +127,13 @@ class WinnerDetermination:
         sort_dict_hand = sorted(
             dict_hand.items(), key=lambda x: x[1], reverse=True)
 
-        if sort_dict_hand.values() == [4, 1]:
+        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
+        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
+
+        if sort_dict_hand_value == [4, 1]:
             i = 2
             point = CONST_POKER*HandsOfPoker.Four_of_a_kind.value
-            for k in sort_dict_hand.keys():
+            for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
         return point
@@ -141,13 +144,18 @@ class WinnerDetermination:
         dict_hand = {}
         hand_value = self.make_value(hand)
         for i in hand_value:
+            if i not in dict_hand:
+                dict_hand[i] = 0
             dict_hand[i] += 1
         sort_dict_hand = sorted(
             dict_hand.items(), key=lambda x: x[1], reverse=True)
-        if sort_dict_hand.values() == [3, 2]:
+
+        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
+        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
+        if sort_dict_hand_value == [3, 2]:
             i = 1
             point = CONST_POKER*HandsOfPoker.Full_house.value
-            for k in sort_dict_hand.keys():
+            for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
         return point
@@ -168,8 +176,8 @@ class WinnerDetermination:
         hand_value = sorted(set(self.make_value(hand)))
         if len(hand_value) < 5:
             return point
-        min_pos = dict_cards_order[hand_value[0]]
-        max_pos = dict_cards_order[hand_value[4]]
+        min_pos = hand_value[0]
+        max_pos = hand_value[4]
         delta_pos = max_pos - min_pos
         if delta_pos == 4:
             point = CONST_POKER*HandsOfPoker.Straights.value + hand_value[4]
@@ -181,13 +189,18 @@ class WinnerDetermination:
         hand_value = self.make_value(hand)
         dict_hand = {}
         for i in hand_value:
+            if i not in dict_hand:
+                dict_hand[i] = 0
             dict_hand[i] += 1
         sort_dict_hand = sorted(
             dict_hand.items(), key=lambda x: x[1], reverse=True)
-        if sort_dict_hand.values() == [3, 1, 1]:
+
+        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
+        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
+        if sort_dict_hand_value == [3, 1, 1]:
             i = 2
             point = CONST_POKER*HandsOfPoker.Three_of_a_kind.value
-            for k in sort_dict_hand.keys():
+            for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
         return point
@@ -198,13 +211,17 @@ class WinnerDetermination:
         hand_value = self.make_value(hand)
         dict_hand = {}
         for i in hand_value:
+            if i not in dict_hand:
+                dict_hand[i] = 0
             dict_hand[i] += 1
         sort_dict_hand = sorted(
             dict_hand.items(), key=lambda x: x[1], reverse=True)
-        if sort_dict_hand.values() == [2, 2, 1]:
+        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
+        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
+        if sort_dict_hand_value == [2, 2, 1]:
             i = 3
             point = CONST_POKER*HandsOfPoker.Two_pair.value
-            for k in sort_dict_hand.keys():
+            for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
         return point
@@ -215,13 +232,19 @@ class WinnerDetermination:
         hand_value = self.make_value(hand)
         dict_hand = {}
         for i in hand_value:
+            if i not in dict_hand:
+                dict_hand[i] = 0
             dict_hand[i] += 1
         sort_dict_hand = sorted(
             dict_hand.items(), key=lambda x: x[1], reverse=True)
-        if sort_dict_hand.values() == [2, 1, 1, 1]:
-            i = 2
+
+        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
+        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
+
+        if sort_dict_hand_value == [2, 1, 1, 1]:
+            i = 3
             point = CONST_POKER*HandsOfPoker.Pair.value
-            for k in sort_dict_hand.keys():
+            for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
         return point
@@ -230,7 +253,7 @@ class WinnerDetermination:
     def check_high_card(self, hand):
         point = 0
         hand_value = sorted(self.make_value(hand))
-        point = CONST_POKER*HandsOfPoker.High_Card.value
-        for i in range(5):
+        hand_value.append(HandsOfPoker.High_Card.value)
+        for i in range(6):
             point += hand_value[i]*(15**i)
         return point

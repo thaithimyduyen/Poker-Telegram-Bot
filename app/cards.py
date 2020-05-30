@@ -5,11 +5,11 @@
 class Card(str):
     @property
     def suit(self) -> str:
-        return self[-2:]
+        return self[-1:]
 
     @property
     def rank(self) -> str:
-        return self[:-2]
+        return self[:-1]
 
     @property
     def value(self) -> str:
@@ -21,21 +21,21 @@ class Card(str):
             return 13
         elif self[0] == "A":
             return 14
-        return int(self[:-2])
+        return int(self[:-1])
 
 
 CARDS = [
-    Card("2♥️"), Card("3♥️"), Card("4♥️"), Card("5♥️"),
-    Card("6♥️"), Card("7♥️"), Card("8♥️"), Card("9♥️"),
-    Card("10♥️"), Card("J♥️"), Card("Q♥️"), Card("K♥️"),
-    Card("A♥️"), Card("2♦️"), Card("3♦️"), Card("4♦️"),
-    Card("5♦️"), Card("6♦️"), Card("7♦️"), Card("8♦️"),
-    Card("9♦️"), Card("10♦️"), Card("J♦️"), Card("Q♦️"),
-    Card("K♦️"), Card("A♦️"), Card("2♣️"), Card("3♣️"),
-    Card("4♣️"), Card("5♣️"), Card("6♣️"), Card("7♣️"),
-    Card("8♣️"), Card("9♣️"), Card("10♣️"), Card("J♣️"),
-    Card("Q♣️"), Card("K♣️"), Card("A♣️"), Card("2♠️"),
-    Card("3♠️"), Card("4♠️"), Card("5♠️"), Card("6♠️"),
-    Card("7♠️"), Card("8♠️"), Card("9♠️"), Card("10♠️"),
-    Card("J♠️"), Card("Q♠️"), Card("K♠️"), Card("A♠️"),
+    Card("2♥"), Card("3♥"), Card("4♥"), Card("5♥"),
+    Card("6♥"), Card("7♥"), Card("8♥"), Card("9♥"),
+    Card("10♥"), Card("J♥"), Card("Q♥"), Card("K♥"),
+    Card("A♥"), Card("2♦"), Card("3♦"), Card("4♦"),
+    Card("5♦"), Card("6♦"), Card("7♦"), Card("8♦"),
+    Card("9♦"), Card("10♦"), Card("J♦"), Card("Q♦"),
+    Card("K♦"), Card("A♦"), Card("2♣"), Card("3♣"),
+    Card("4♣"), Card("5♣"), Card("6♣"), Card("7♣"),
+    Card("8♣"), Card("9♣"), Card("10♣"), Card("J♣"),
+    Card("Q♣"), Card("K♣"), Card("A♣"), Card("2♠"),
+    Card("3♠"), Card("4♠"), Card("5♠"), Card("6♠"),
+    Card("7♠"), Card("8♠"), Card("9♠"), Card("10♠"),
+    Card("J♠"), Card("Q♠"), Card("K♠"), Card("A♠"),
 ]
