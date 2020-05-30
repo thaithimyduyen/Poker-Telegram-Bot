@@ -1,42 +1,55 @@
 #!/usr/bin/env python3
+
 import enum
-import random
 
-from typing import List
+from app.cards import get_cards
 
-from app.cards import CARDS, Card
+DEFAULT_MONEY = 1000
 
 MessageId = str
 ChatId = str
 UserId = str
 Mention = str
+Score = int
+Money = int
 
-Cards = List[Card]
+
+class Wallet:
+    def __init__(self):
+        self.money = Money(DEFAULT_MONEY)
 
 
 class Player:
-    def __init__(self, user_id: UserId, mention_markdown: Mention):
+    def __init__(
+        self,
+        user_id: UserId,
+        mention_markdown: Mention,
+        wallet: Wallet,
+    ):
         self.user_id = user_id
         self.mention_markdown = mention_markdown
+        self.wallet = wallet
         self.cards = []
-        self.money = 100
         self.round_rate = 0
-        self.win_rate = 0
-        self.win_hand = 0
 
 
 class Game:
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.pot = 0
         self.max_round_rate = 0
         self.state = GameState.initial
         self.active_players = []
         self.cards_table = []
         self.current_player_index = -1
-        self.remain_cards = CARDS.copy()
+        self.remain_cards = get_cards()
         self.trading_end_user_id = 0
-        self.ready_players = set()
-        random.shuffle(self.remain_cards)
+        self.ready_users = set()
+
+    def __repr__(self):
+        return "{}({!r})".format(self.__class__.__name__, self.__dict__)
 
 
 class GameState(enum.Enum):
@@ -52,9 +65,9 @@ class PlayerAction(enum.Enum):
     check = "check"
     call = "call"
     fold = "fold"
-    raise_rate = "raise_rate"
+    raise_rate = "raise rate"
     bet = "bet"
-    all_in = "all_in"
+    all_in = "all in"
 
 
 class UserException(Exception):

@@ -23,6 +23,9 @@ class PokerBotCotroller:
             CommandHandler('start', self._handle_start)
         )
         updater.dispatcher.add_handler(
+            CommandHandler('cards', self._handle_cards)
+        )
+        updater.dispatcher.add_handler(
             CallbackQueryHandler(
                 self._model.middleware_user_turn(
                     self._handle_button_clicked,
@@ -35,6 +38,9 @@ class PokerBotCotroller:
 
     def _handle_start(self, update: Update, context: CallbackContext) -> None:
         self._model.start(update, context)
+
+    def _handle_cards(self, update: Update, context: CallbackContext) -> None:
+        self._model.send_cards_to_user(update, context)
 
     def _handle_check(self, update: Update, context: CallbackContext) -> None:
         self._model.check(update, context)

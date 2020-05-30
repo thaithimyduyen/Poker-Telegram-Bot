@@ -1,4 +1,4 @@
-all: check test run
+all: install check test run
 run:
 	python3 main.py
 debug:
@@ -6,4 +6,6 @@ debug:
 test:
 	python3 -m unittest discover -s ./tests
 check:
-	flake8 .
+	python3 -m flake8 .
+install:
+	pip3 install -r requirements.txt

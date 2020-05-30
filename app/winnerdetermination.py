@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
-from app.entities import Card, Cards
-from itertools import combinations
-import enum
 
-dict_cards_order = {
-    2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7,
-    8: 8, 9: 9, 10: 10, 11: 11, 12: 12, 13: 13, 14: 14
-}
-CONST_POKER = 15**5
+import enum
+from itertools import combinations
+from typing import Dict, List, Tuple
+
+from app.cards import Card, Cards
+from app.entities import Player, Score
+
+HAND_RANK = 15**5
 
 
 class HandsOfPoker(enum.Enum):
-    Royal_flush = 10
-    Straight_flush = 9
-    Four_of_a_kind = 8
-    Full_house = 7
-    Flush = 6
-    Straights = 5
-    Three_of_a_kind = 4
-    Two_pair = 3
-    Pair = 2
-    High_Card = 1
+    ROYAL_FLUSH = 10
+    STRAIGHT_FLUSH = 9
+    FOUR_OF_A_KIND = 8
+    FULL_HOUSE = 7
+    FLUSH = 6
+    STRAIGHTS = 5
+    THREE_OF_A_KIND = 4
+    TWO_PAIR = 3
+    PAIR = 2
+    HIGH_CARD = 1
 
 
 class WinnerDetermination:
@@ -28,7 +28,7 @@ class WinnerDetermination:
         hands = list(combinations(cards, 5))
         return hands
 
-    def _calculate_hand_point(self, hand: Cards) -> int:
+    def _calculate_hand_point(self, hand: Cards) -> Score:
         if self.check_royal_flush(hand) != 0:
             return self.check_royal_flush(hand)
         elif self.check_straight_flush(hand) != 0:
@@ -50,7 +50,7 @@ class WinnerDetermination:
         elif self.check_high_card(hand) != 0:
             return self.check_high_card(hand)
 
-    def _determine_best_hand(self, hands) -> list:
+    def _best_hand_score(self, hands) -> Tuple[Cards, Score]:
         best_point = 0
         best_hand = []
         for hand in hands:
@@ -58,31 +58,24 @@ class WinnerDetermination:
             if hand_point > best_point:
                 best_hand = hand
                 best_point = hand_point
-        return [best_hand, best_point]
+        return (best_hand, best_point)
 
-    def determine_winner(self, all_cards_all_players):
-        for player, all_card in all_cards_all_players.items():
-            hands = self._make_combinations(all_card)
-            best_hand, best_point = self._determine_best_hand(hands)
-            hand_point_player_dict = {
-                player: [best_hand, best_point]
-            }
+    def determinate_scores(
+        self,
+        players: List[Player],
+        cards_table: Cards,
+    ) -> Dict[Score, List[Tuple[Player, Cards]]]:
+        res = {}
 
-        winner_point = 0
-        winner = []
-        winner_hand = []
-        for player, hand_and_point in hand_point_player_dict.items():
-            best_hand, best_point = hand_and_point
-            if best_point > winner_point:
-                winner_point = best_point
+        for player in players:
+            player_hands = self._make_combinations(player.cards + cards_table)
+            best_hand, score = self._best_hand_score(player_hands)
 
-        for player, hand_and_point in hand_point_player_dict.items():
-            best_hand, best_point = hand_and_point
-            if best_point == winner_point:
-                winner_hand.append(best_hand)
-                winner.append(player)
+            if score not in res:
+                res[score] = []
+            res[score].append((player, best_hand))
 
-        return [winner, winner_hand]
+        return res
 
     def make_value(self, hand):
         return [i.value for i in hand]
@@ -97,7 +90,7 @@ class WinnerDetermination:
         hand_suit = set(self.make_suit(hand))
         min_hand = hand_value[0]
         if len(hand_value) == 5 and min_hand == 10 and len(hand_suit) == 1:
-            point = CONST_POKER*HandsOfPoker.Royal_flush.value
+            point = HAND_RANK*HandsOfPoker.ROYAL_FLUSH.value
         return point
 
     # Five cards in a sequence, all in the same suit
@@ -111,8 +104,8 @@ class WinnerDetermination:
         max_pos = hand_value[4]
         delta_pos = max_pos - min_pos
         if len(hand_suit) == 1 and delta_pos == 4:
-            point = (CONST_POKER *
-                     HandsOfPoker.Straight_flush.value) + hand_value[4]
+            point = (HAND_RANK *
+                     HandsOfPoker.STRAIGHT_FLUSH.value) + hand_value[4]
         return point
 
     # All four cards of the same rank
@@ -132,7 +125,7 @@ class WinnerDetermination:
 
         if sort_dict_hand_value == [4, 1]:
             i = 2
-            point = CONST_POKER*HandsOfPoker.Four_of_a_kind.value
+            point = HAND_RANK*HandsOfPoker.FOUR_OF_A_KIND.value
             for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
@@ -154,7 +147,7 @@ class WinnerDetermination:
         sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
         if sort_dict_hand_value == [3, 2]:
             i = 1
-            point = CONST_POKER*HandsOfPoker.Full_house.value
+            point = HAND_RANK*HandsOfPoker.FULL_HOUSE.value
             for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
@@ -167,7 +160,7 @@ class WinnerDetermination:
         suit = self.make_suit(hand)
         hand_value = self.make_value(hand)
         if len(set(suit)) == 1:
-            point = max(hand_value) + CONST_POKER*HandsOfPoker.Flush.value
+            point = max(hand_value) + HAND_RANK*HandsOfPoker.FLUSH.value
         return point
 
     # Five cards in a sequence, but not of the same suit.
@@ -180,7 +173,7 @@ class WinnerDetermination:
         max_pos = hand_value[4]
         delta_pos = max_pos - min_pos
         if delta_pos == 4:
-            point = CONST_POKER*HandsOfPoker.Straights.value + hand_value[4]
+            point = HAND_RANK*HandsOfPoker.STRAIGHTS.value + hand_value[4]
         return point
 
     # Three cards of the same rank
@@ -199,7 +192,7 @@ class WinnerDetermination:
         sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
         if sort_dict_hand_value == [3, 1, 1]:
             i = 2
-            point = CONST_POKER*HandsOfPoker.Three_of_a_kind.value
+            point = HAND_RANK*HandsOfPoker.THREE_OF_A_KIND.value
             for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
@@ -220,7 +213,7 @@ class WinnerDetermination:
         sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
         if sort_dict_hand_value == [2, 2, 1]:
             i = 3
-            point = CONST_POKER*HandsOfPoker.Two_pair.value
+            point = HAND_RANK*HandsOfPoker.TWO_PAIR.value
             for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
@@ -243,7 +236,7 @@ class WinnerDetermination:
 
         if sort_dict_hand_value == [2, 1, 1, 1]:
             i = 3
-            point = CONST_POKER*HandsOfPoker.Pair.value
+            point = HAND_RANK*HandsOfPoker.PAIR.value
             for k in sort_dict_hand_key:
                 point += k*(15**i)
                 i -= 1
@@ -253,7 +246,7 @@ class WinnerDetermination:
     def check_high_card(self, hand):
         point = 0
         hand_value = sorted(self.make_value(hand))
-        hand_value.append(HandsOfPoker.High_Card.value)
+        hand_value.append(HandsOfPoker.HIGH_CARD.value)
         for i in range(6):
             point += hand_value[i]*(15**i)
         return point

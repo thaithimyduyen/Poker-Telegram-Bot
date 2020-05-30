@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import random
+from typing import List
 
-# TODO: Add function get_cards(). It should create shuffled copy of cards.
+
 class Card(str):
     @property
     def suit(self) -> str:
@@ -24,18 +26,24 @@ class Card(str):
         return int(self[:-1])
 
 
-CARDS = [
-    Card("2♥"), Card("3♥"), Card("4♥"), Card("5♥"),
-    Card("6♥"), Card("7♥"), Card("8♥"), Card("9♥"),
-    Card("10♥"), Card("J♥"), Card("Q♥"), Card("K♥"),
-    Card("A♥"), Card("2♦"), Card("3♦"), Card("4♦"),
-    Card("5♦"), Card("6♦"), Card("7♦"), Card("8♦"),
-    Card("9♦"), Card("10♦"), Card("J♦"), Card("Q♦"),
-    Card("K♦"), Card("A♦"), Card("2♣"), Card("3♣"),
-    Card("4♣"), Card("5♣"), Card("6♣"), Card("7♣"),
-    Card("8♣"), Card("9♣"), Card("10♣"), Card("J♣"),
-    Card("Q♣"), Card("K♣"), Card("A♣"), Card("2♠"),
-    Card("3♠"), Card("4♠"), Card("5♠"), Card("6♠"),
-    Card("7♠"), Card("8♠"), Card("9♠"), Card("10♠"),
-    Card("J♠"), Card("Q♠"), Card("K♠"), Card("A♠"),
-]
+Cards = List[Card]
+
+
+def get_cards() -> Cards:
+    cards = [
+        Card("2♥"), Card("3♥"), Card("4♥"), Card("5♥"),
+        Card("6♥"), Card("7♥"), Card("8♥"), Card("9♥"),
+        Card("10♥"), Card("J♥"), Card("Q♥"), Card("K♥"),
+        Card("A♥"), Card("2♦"), Card("3♦"), Card("4♦"),
+        Card("5♦"), Card("6♦"), Card("7♦"), Card("8♦"),
+        Card("9♦"), Card("10♦"), Card("J♦"), Card("Q♦"),
+        Card("K♦"), Card("A♦"), Card("2♣"), Card("3♣"),
+        Card("4♣"), Card("5♣"), Card("6♣"), Card("7♣"),
+        Card("8♣"), Card("9♣"), Card("10♣"), Card("J♣"),
+        Card("Q♣"), Card("K♣"), Card("A♣"), Card("2♠"),
+        Card("3♠"), Card("4♠"), Card("5♠"), Card("6♠"),
+        Card("7♠"), Card("8♠"), Card("9♠"), Card("10♠"),
+        Card("J♠"), Card("Q♠"), Card("K♠"), Card("A♠"),
+    ]
+    random.shuffle(cards)
+    return cards

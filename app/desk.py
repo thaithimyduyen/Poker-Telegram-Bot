@@ -4,7 +4,7 @@
 from PIL import Image
 from pathlib import Path
 
-from app.entities import Cards, Card
+from app.cards import Cards, Card
 
 
 class DeskImageGenerator:
@@ -16,10 +16,10 @@ class DeskImageGenerator:
     ):
         self._card_assets = card_assets
         self._file_suit_mapping = {
-            "♣️": "C",
-            "♦️": "D",
-            "♥️": "H",
-            "♠️": "S",
+            "♣": "C",
+            "♦": "D",
+            "♥": "H",
+            "♠": "S",
         }
         self._card_size = card_size
         self._loaded_card_imgs = {}

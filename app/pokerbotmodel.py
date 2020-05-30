@@ -2,9 +2,12 @@
 
 import os
 
+from typing import List, Tuple
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
+
 from app.winnerdetermination import WinnerDetermination
+from app.cards import Cards
 from app.entities import (
     Game,
     GameState,
@@ -12,11 +15,15 @@ from app.entities import (
     ChatId,
     UserId,
     UserException,
+    Money,
+    Wallet
 )
 from app.pokerbotview import PokerBotViewer
 
 
 KEY_CHAT_DATA_GAME = "game"
+KEY_USER_WALLET = "wallet"
+
 MAX_PLAYERS = 8
 MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 SMALL_BLIND = 5
@@ -56,7 +63,7 @@ class PokerBotModel:
 
         user = update.effective_message.from_user
 
-        if user.id in game.ready_players:
+        if user.id in game.ready_users:
             self._view.send_message_reply(
                 chat_id=update.effective_message.chat_id,
                 message_id=update.effective_message.message_id,
@@ -64,11 +71,15 @@ class PokerBotModel:
             )
             return
 
-        game.ready_players.add(user.id)
+        game.ready_users.add(user.id)
+
+        if KEY_USER_WALLET not in context.user_data:
+            context.user_data[KEY_USER_WALLET] = Wallet()
 
         game.active_players.append(Player(
             user_id=user.id,
             mention_markdown=user.mention_markdown(),
+            wallet=context.user_data[KEY_USER_WALLET],
         ))
 
         self._view.send_message(
@@ -110,6 +121,27 @@ class PokerBotModel:
         self._process_playing(chat_id=chat_id, game=game)
         self._round_rate.round_pre_flop_rate_after_first_turn(game)
 
+    def send_cards_to_user(
+        self,
+        update: Update,
+        context: CallbackContext,
+    ) -> None:
+        game = self._game_from_context(context)
+
+        for player in game.active_players:
+            if player.user_id == update.effective_user.id:
+                current_player = player
+                break
+
+        if current_player is None or not current_player.cards:
+            return
+
+        self._view.send_cards(
+            chat_id=update.effective_message.chat_id,
+            cards=current_player.cards,
+            mention_markdown=current_player.mention_markdown,
+        )
+
     def _check_access(self, chat_id: ChatId, user_id: UserId) -> bool:
         chat_admins = self._bot.get_chat_administrators(chat_id)
         for m in chat_admins:
@@ -129,7 +161,7 @@ class PokerBotModel:
                 mention_markdown=player.mention_markdown,
             )
 
-    def _current_player(self, game: Game) -> Player:
+    def _current_turn_player(self, game: Game) -> Player:
         i = game.current_player_index % len(game.active_players)
         return game.active_players[i]
 
@@ -141,7 +173,7 @@ class PokerBotModel:
         game.current_player_index += 1
         game.current_player_index %= len(game.active_players)
 
-        if self._current_player(game).user_id == game.trading_end_user_id:
+        if self._current_turn_player(game).user_id == game.trading_end_user_id:
             self._round_rate.to_pot(game)
             self._goto_next_round(game, chat_id)
             game.current_player_index = 0
@@ -149,7 +181,7 @@ class PokerBotModel:
         if game.state == GameState.finished:
             return
 
-        player = self._current_player(game)
+        player = self._current_turn_player(game)
         self._view.send_turn_actions(
             chat_id=chat_id,
             game=game,
@@ -165,39 +197,42 @@ class PokerBotModel:
         for _ in range(count):
             game.cards_table.append(game.remain_cards.pop())
 
-        cards_table = " ".join(game.cards_table)
-        self._view.send_message(
+        self._view.send_desk_cards_img(
             chat_id=chat_id,
-            text="*Cards are added to table:*\n" +
-            f"{cards_table}\n" +
-            f"*Current_pot:* {game.pot}$"
+            cards=game.cards_table,
+            caption=f"*Current_pot:* {game.pot}$",
         )
 
-    def _finish(self, game: Game, chat_id: ChatId) -> None:
+    def _finish(
+        self,
+        game: Game,
+        chat_id: ChatId,
+    ) -> None:
         text = "Game is finished with result:\n\n"
-        for player in game.active_players:
-            player_all_cards = player.cards + game.cards_table
-            all_cards_all_players = {
-                player: player_all_cards
-            }
-        print(all_cards_all_players)
-        winners = self._winner_determine.determine_winner(
-            all_cards_all_players)
-        win_hands, win_players = winners
-        for win_hand in win_hands:
-            player.win_hand = win_hand
 
-        self._round_rate.finish_rate(game, win_players)
-        for player in win_players:
-            text += (f"{player.mention_markdown}:\n" +
-                     f"GET: *{player.win_rate} $*\n" +
-                     f"With combination of cards:\n" +
-                     f"{player.win_hand}\n\n")
-        self._view.send_message(
-            chat_id=chat_id,
-            text=text
+        player_scores = self._winner_determine.determinate_scores(
+            players=game.active_players,
+            cards_table=game.cards_table,
         )
-        # TODO: Clear game.
+
+        max_score = max(player_scores)
+        winners_hand_money = self._round_rate.finish_rate(
+            game=game,
+            win_players=player_scores[max_score],
+        )
+
+        for (player, best_hand, money) in winners_hand_money:
+            win_hand = " ".join(best_hand)
+            text += (
+                f"{player.mention_markdown}:\n" +
+                f"GOT: *{money} $*\n" +
+                f"With combination of cards:\n" +
+                f"{win_hand}\n\n"
+            )
+
+        self._view.send_message(chat_id=chat_id, text=text)
+
+        game.reset()
 
     def _goto_next_round(self, game: Game, chat_id: ChatId) -> bool:
         def add_cards(cards_count):
@@ -236,7 +271,10 @@ class PokerBotModel:
     def middleware_user_turn(self, fn: Handler) -> Handler:
         def m(update, context):
             game = self._game_from_context(context)
-            current_player = self._current_player(game)
+            if game.state == GameState.initial:
+                return
+
+            current_player = self._current_turn_player(game)
             current_user_id = update.callback_query.from_user.id
             if current_user_id != current_player.user_id:
                 return
@@ -250,10 +288,10 @@ class PokerBotModel:
 
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
-            text=f"{self._current_player(game).mention_markdown} folded"
+            text=f"{self._current_turn_player(game).mention_markdown} folded"
         )
 
-        game.pot += self._current_player(game).round_rate
+        game.pot += self._current_turn_player(game).round_rate
 
         del game.active_players[game.current_player_index]
         game.current_player_index -= 1
@@ -271,10 +309,10 @@ class PokerBotModel:
     ) -> None:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
-        player = self._current_player(game)
+        player = self._current_turn_player(game)
         self._view.send_message(
             chat_id=chat_id,
-            text=f"{self._current_player(game).mention_markdown} {action}"
+            text=f"{self._current_turn_player(game).mention_markdown} {action}"
         )
         try:
             self._round_rate.call_check(game, player)
@@ -298,11 +336,11 @@ class PokerBotModel:
         chat_id = update.effective_message.chat_id
         self._view.send_message(
             chat_id=chat_id,
-            text=f"{self._current_player(game).mention_markdown}" +
-            f" {action} {RAISE_RATE} $"
+            text=self._current_turn_player(game).mention_markdown +
+            f" {action} {RAISE_RATE}"
         )
 
-        player = self._current_player(game)
+        player = self._current_turn_player(game)
 
         try:
             self._round_rate.raise_rate_bet(game, player, RAISE_RATE)
@@ -328,10 +366,10 @@ class RoundRateModel:
     def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
         amount += game.max_round_rate - player.round_rate
 
-        if amount > player.money:
+        if amount > player.wallet.money:
             raise UserException("not enough money")
 
-        player.money -= amount
+        player.wallet.money -= amount
         player.round_rate += amount
 
         game.max_round_rate = player.round_rate
@@ -340,17 +378,23 @@ class RoundRateModel:
     def call_check(self, game, player) -> None:
         amount = game.max_round_rate - player.round_rate
 
-        if amount > player.money:
+        if amount > player.wallet.money:
             raise UserException("not enough money")
 
-        player.money -= amount
+        player.wallet.money -= amount
         player.round_rate += amount
 
-    def finish_rate(self, game: Game, win_players) -> None:
-        for win_player in win_players:
-            win_get_rate = game.pot // len(win_players)
-            win_player.money += win_get_rate
-            win_player.win_rate = win_get_rate
+    def finish_rate(
+        self,
+        game: Game,
+        win_players: List[Tuple[Player, Cards]],
+    ) -> List[Tuple[Player, Cards, Money]]:
+        res = []
+        win_money = game.pot // len(win_players)
+        for win_player, best_hand in win_players:
+            win_player.wallet.money += win_money
+            res.append((win_player, best_hand, win_money))
+        return res
 
     def to_pot(self, game) -> None:
         for p in game.active_players:

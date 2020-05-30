@@ -7,15 +7,16 @@ from telegram import (
     ReplyKeyboardMarkup,
     Bot,
 )
+from io import BytesIO
 
-
+from app.desk import DeskImageGenerator
+from app.cards import Cards
 from app.entities import (
     Game,
     Player,
     PlayerAction,
     MessageId,
     ChatId,
-    Cards,
     Mention,
 )
 
@@ -23,6 +24,7 @@ from app.entities import (
 class PokerBotViewer:
     def __init__(self, bot: Bot):
         self._bot = bot
+        self._desk_generator = DeskImageGenerator()
 
     def send_message(self, chat_id: ChatId, text: str) -> MessageId:
         return self._bot.send_message(
@@ -43,6 +45,24 @@ class PokerBotViewer:
             parse_mode=ParseMode.MARKDOWN,
             text=text,
         ).message_id
+
+    def send_desk_cards_img(
+        self,
+        chat_id: ChatId,
+        cards: Cards,
+        caption="",
+    ):
+        im_cards = self._desk_generator.generate_desk(cards)
+        bio = BytesIO()
+        bio.name = 'desk.png'
+        im_cards.save(bio, 'PNG')
+        bio.seek(0)
+        return self._bot.send_photo(
+            chat_id=chat_id,
+            photo=bio,
+            caption=caption,
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
     @staticmethod
     def _get_cards_markup(cards: Cards) -> ReplyKeyboardMarkup:
@@ -105,7 +125,6 @@ class PokerBotViewer:
             cards_table = "no cards"
         else:
             cards_table = " ".join(game.cards_table)
-
         text = (
             "{}, it is your turn\n" +
             "Cards on the table: \n" +
@@ -115,7 +134,7 @@ class PokerBotViewer:
         ).format(
             player.mention_markdown,
             cards_table,
-            player.money,
+            player.wallet.money,
             game.max_round_rate,
         )
         change_action = PokerBotViewer.define_change_action(game, player)

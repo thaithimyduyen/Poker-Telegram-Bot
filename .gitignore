@@ -1,6 +1,9 @@
 # Secrets
 token.txt
 
+# State.
+state.dat
+
 # Editor and OS.
 
 .vscode

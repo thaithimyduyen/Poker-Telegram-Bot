@@ -2,7 +2,7 @@ import unittest
 
 from typing import Tuple
 
-from app.entities import Cards, Card
+from app.cards import Cards, Card
 from app.winnerdetermination import WinnerDetermination
 
 
@@ -37,7 +37,7 @@ class TestWinnerDetermination(unittest.TestCase):
         determinator = WinnerDetermination()
         for l in game_lines:
             hands = TestWinnerDetermination.parse_hands(l)
-            got_best_hand = determinator._determine_best_hand(hands)[0]
+            got_best_hand = determinator._best_hand_score(hands)[0]
             self.assertListEqual(list1=got_best_hand, list2=hands[0])
 
 
