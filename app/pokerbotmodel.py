@@ -44,10 +44,11 @@ class PokerBotModel:
 
     def ready(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
+        chat_id = update.effective_message.chat_id
 
         if game.state != GameState.initial:
             self._view.send_message_reply(
-                chat_id=update.effective_message.chat_id,
+                chat_id=chat_id,
                 message_id=update.effective_message.message_id,
                 text="The game is already started. Wait!"
             )
@@ -55,7 +56,7 @@ class PokerBotModel:
 
         if len(game.active_players) > MAX_PLAYERS:
             self._view.send_message_reply(
-                chat_id=update.effective_message.chat_id,
+                chat_id=chat_id,
                 text="The room is full",
                 message_id=update.effective_message.message_id,
             )
@@ -65,7 +66,7 @@ class PokerBotModel:
 
         if user.id in game.ready_users:
             self._view.send_message_reply(
-                chat_id=update.effective_message.chat_id,
+                chat_id=chat_id,
                 message_id=update.effective_message.message_id,
                 text="You has already been ready"
             )
@@ -83,9 +84,16 @@ class PokerBotModel:
         ))
 
         self._view.send_message(
-            chat_id=update.effective_message.chat_id,
+            chat_id=chat_id,
             text=f"{user.mention_markdown()} is ready"
         )
+
+        members_count = self._bot.get_chat_members_count(chat_id)
+        players_active = len(game.active_players)
+        # One is the bot.
+        if players_active == members_count - 1 and \
+                players_active >= MIN_PLAYERS:
+            self._start_game(game=game, chat_id=chat_id)
 
     def start(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
@@ -112,6 +120,9 @@ class PokerBotModel:
             )
             return
 
+        self._start_game(game=game, chat_id=chat_id)
+
+    def _start_game(self, game: Game, chat_id: ChatId) -> None:
         game.state = GameState.round_pre_flop
         self._divide_cards(game=game, chat_id=chat_id,)
         self._view.send_message(chat_id=chat_id, text="*Game is created!!*")
@@ -229,7 +240,7 @@ class PokerBotModel:
                 f"With combination of cards:\n" +
                 f"{win_hand}\n\n"
             )
-
+        text += "/ready to continue"
         self._view.send_message(chat_id=chat_id, text=text)
 
         game.reset()
