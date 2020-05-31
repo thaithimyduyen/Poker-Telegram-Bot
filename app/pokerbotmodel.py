@@ -232,14 +232,18 @@ class PokerBotModel:
             win_players=player_scores[max_score],
         )
 
+        only_one_player = len(game.active_players) == 1
         for (player, best_hand, money) in winners_hand_money:
             win_hand = " ".join(best_hand)
             text += (
                 f"{player.mention_markdown}:\n" +
-                f"GOT: *{money} $*\n" +
-                f"With combination of cards:\n" +
-                f"{win_hand}\n\n"
+                f"GOT: *{money} $*\n"
             )
+            if not only_one_player:
+                text += (
+                    f"With combination of cards:\n" +
+                    f"{win_hand}\n\n"
+                )
         text += "/ready to continue"
         self._view.send_message(chat_id=chat_id, text=text)
 

@@ -14,7 +14,7 @@ class PokerBot:
     def __init__(
         self,
         token: str,
-        proxy_url: str = "socks5://192.168.31.110:9100",
+        proxy_url: str = "socks5://127.0.0.1:9050",
         state_file: str = "./state.dat"
     ):
         req = Request(proxy_url=proxy_url, con_pool_size=8)
