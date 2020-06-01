@@ -37,14 +37,23 @@ class PokerBotModel:
         self._round_rate = RoundRateModel()
         self._winner_determine = WinnerDetermination()
 
-    def _game_from_context(self, context: CallbackContext) -> Game:
+    @staticmethod
+    def _game_from_context(context: CallbackContext) -> Game:
         if KEY_CHAT_DATA_GAME not in context.chat_data:
             context.chat_data[KEY_CHAT_DATA_GAME] = Game()
         return context.chat_data[KEY_CHAT_DATA_GAME]
 
+    @staticmethod
+    def _current_turn_player(game: Game) -> Player:
+        i = game.current_player_index % len(game.active_players)
+        return game.active_players[i]
+
     def ready(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
+
+        for i in range(100):
+            self._view.send_message(chat_id=chat_id, text=str(i))
 
         if game.state != GameState.initial:
             self._view.send_message_reply(
@@ -171,10 +180,6 @@ class PokerBotModel:
                 cards=cards,
                 mention_markdown=player.mention_markdown,
             )
-
-    def _current_turn_player(self, game: Game) -> Player:
-        i = game.current_player_index % len(game.active_players)
-        return game.active_players[i]
 
     def _process_playing(self, chat_id: ChatId, game: Game) -> None:
         if len(game.active_players) == 1:
@@ -374,15 +379,18 @@ class PokerBotModel:
 
 
 class RoundRateModel:
-    def round_pre_flop_rate_before_first_turn(self, game):
-        self.raise_rate_bet(game, game.active_players[0], SMALL_BLIND)
-        self.raise_rate_bet(game, game.active_players[1], SMALL_BLIND)
+    @classmethod
+    def round_pre_flop_rate_before_first_turn(cls, game: Game):
+        cls.raise_rate_bet(game, game.active_players[0], SMALL_BLIND)
+        cls.raise_rate_bet(game, game.active_players[1], SMALL_BLIND)
 
-    def round_pre_flop_rate_after_first_turn(self, game):
+    @staticmethod
+    def round_pre_flop_rate_after_first_turn(game: Game):
         dealer = 2 % len(game.active_players)
         game.trading_end_user_id = game.active_players[dealer].user_id
 
-    def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
+    @staticmethod
+    def raise_rate_bet(game: Game, player: Player, amount: int) -> None:
         amount += game.max_round_rate - player.round_rate
 
         if amount > player.wallet.money:
@@ -394,7 +402,8 @@ class RoundRateModel:
         game.max_round_rate = player.round_rate
         game.trading_end_user_id = player.user_id
 
-    def call_check(self, game, player) -> None:
+    @staticmethod
+    def call_check(game, player) -> None:
         amount = game.max_round_rate - player.round_rate
 
         if amount > player.wallet.money:
@@ -403,8 +412,8 @@ class RoundRateModel:
         player.wallet.money -= amount
         player.round_rate += amount
 
+    @staticmethod
     def finish_rate(
-        self,
         game: Game,
         win_players: List[Tuple[Player, Cards]],
     ) -> List[Tuple[Player, Cards, Money]]:
@@ -415,7 +424,8 @@ class RoundRateModel:
             res.append((win_player, best_hand, win_money))
         return res
 
-    def to_pot(self, game) -> None:
+    @staticmethod
+    def to_pot(game) -> None:
         for p in game.active_players:
             game.pot += p.round_rate
             p.round_rate = 0

@@ -24,18 +24,21 @@ class HandsOfPoker(enum.Enum):
 
 
 class WinnerDetermination:
-    def _make_combinations(self, cards: Card) -> Card:
+    @staticmethod
+    def _make_combinations(cards: Card) -> Card:
         hands = list(combinations(cards, 5))
         return hands
 
-    def _make_values(self, hand):
+    @staticmethod
+    def _make_values(hand) -> List[int]:
         return [i.value for i in hand]
 
-    def _make_suits(self, hand):
+    @staticmethod
+    def _make_suits(hand) -> List[str]:
         return [i.suit for i in hand]
 
+    @staticmethod
     def _calculate_hand_point(
-        self,
         hand_value: List[int],
         kinds_poker: HandsOfPoker,
     ) -> Score:
@@ -46,10 +49,8 @@ class WinnerDetermination:
             i *= 15
         return score
 
-    def _group_hand(
-        self,
-        hand_values: List[int],
-    ) -> Tuple[List[int], List[int]]:
+    @staticmethod
+    def _group_hand(hand_values: List[int]) -> Tuple[List[int], List[int]]:
         dict_hand = {}
         for i in hand_values:
             if i not in dict_hand:
@@ -134,7 +135,7 @@ class WinnerDetermination:
                 hand_values, HandsOfPoker.HIGH_CARD
             )
 
-    def _best_hand_score(self, hands) -> Tuple[Cards, Score]:
+    def _best_hand_score(self, hands: List[Cards]) -> Tuple[Cards, Score]:
         best_point = 0
         best_hand = []
         for hand in hands:
