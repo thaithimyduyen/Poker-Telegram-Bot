@@ -25,7 +25,10 @@ def main() -> None:
         sys.exit(130)
     signal(SIGINT, keyboard_interrupt)
 
-    bot.run()
+    try:
+        bot.run()
+    finally:
+        bot.flush()
 
 
 if __name__ == "__main__":

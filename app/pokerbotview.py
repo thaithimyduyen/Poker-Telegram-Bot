@@ -20,6 +20,7 @@ from app.entities import (
     MessageId,
     ChatId,
     Mention,
+    Money,
 )
 
 
@@ -125,6 +126,7 @@ class PokerBotViewer:
             chat_id: ChatId,
             game: Game,
             player: Player,
+            money: Money,
     ) -> Promise:
         if len(game.cards_table) == 0:
             cards_table = "no cards"
@@ -134,12 +136,12 @@ class PokerBotViewer:
             "{}, it is your turn\n" +
             "Cards on the table: \n" +
             "{}\n" +
-            "Your money: *{}$*\n " +
+            "Your money: *{}$*\n" +
             "Max round rate: *{}$*"
         ).format(
             player.mention_markdown,
             cards_table,
-            player.wallet.money,
+            money,
             game.max_round_rate,
         )
         change_action = PokerBotViewer.define_change_action(game, player)

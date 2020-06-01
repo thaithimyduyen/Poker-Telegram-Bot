@@ -3,6 +3,7 @@
 import os
 
 from typing import List, Tuple
+from threading import Lock
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
 
@@ -34,7 +35,8 @@ class PokerBotModel:
     def __init__(self, view: PokerBotViewer, bot: Bot):
         self._view = view
         self._bot = bot
-        self._round_rate = RoundRateModel()
+        self._wallet_manager = WalletManagerModel()
+        self._round_rate = RoundRateModel(self._wallet_manager)
         self._winner_determine = WinnerDetermination()
 
     @staticmethod
@@ -51,9 +53,6 @@ class PokerBotModel:
     def ready(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
-
-        for i in range(100):
-            self._view.send_message(chat_id=chat_id, text=str(i))
 
         if game.state != GameState.initial:
             self._view.send_message_reply(
@@ -134,7 +133,7 @@ class PokerBotModel:
     def _start_game(self, game: Game, chat_id: ChatId) -> None:
         game.state = GameState.round_pre_flop
         self._divide_cards(game=game, chat_id=chat_id,)
-        self._view.send_message(chat_id=chat_id, text="*Game is created!!*")
+        self._view.send_message(chat_id=chat_id, text="*Game is started!!*")
 
         game.current_player_index = 1
         self._round_rate.round_pre_flop_rate_before_first_turn(game)
@@ -194,7 +193,7 @@ class PokerBotModel:
             self._goto_next_round(game, chat_id)
             game.current_player_index = 0
 
-        if game.state == GameState.finished:
+        if game.state == GameState.initial:
             return
 
         player = self._current_turn_player(game)
@@ -202,6 +201,7 @@ class PokerBotModel:
             chat_id=chat_id,
             game=game,
             player=player,
+            money=self._wallet_manager.value(player.wallet),
         )
 
     def add_cards_to_table(
@@ -309,16 +309,21 @@ class PokerBotModel:
 
     def fold(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
+        player = self._current_turn_player(game)
 
-        self._view.send_message(
-            chat_id=update.effective_message.chat_id,
-            text=f"{self._current_turn_player(game).mention_markdown} folded"
+        self._wallet_manager.approve(
+            game=game,
+            wallet=player.wallet,
         )
-
-        game.pot += self._current_turn_player(game).round_rate
+        game.pot += player.round_rate
 
         del game.active_players[game.current_player_index]
         game.current_player_index -= 1
+
+        self._view.send_message(
+            chat_id=update.effective_message.chat_id,
+            text=f"{player.mention_markdown} folded"
+        )
 
         self._process_playing(
             chat_id=update.effective_message.chat_id,
@@ -378,56 +383,107 @@ class PokerBotModel:
         pass
 
 
+class WalletManagerModel:
+    def __init__(self):
+        self._lock = Lock()
+
+    def inc(self, game: Game, wallet: Wallet, amount: Money = 0) -> None:
+        """ Increase count of money in the wallet.
+            Decrease authorized money.
+        """
+
+        self._lock.acquire()
+        try:
+            if wallet.money + amount < 0:
+                raise UserException("not enough money")
+            wallet.money += amount
+            wallet.authorized_money[game.id] -= amount
+        finally:
+            self._lock.release()
+
+    def approve(self, game: Game, wallet: Wallet) -> None:
+        """ Approve authorized money. """
+
+        self._lock.acquire()
+        try:
+            wallet.authorized_money[game.id] = 0
+        finally:
+            self._lock.release()
+
+    def authorize(self, game: Game, wallet: Wallet, amount: Money) -> None:
+        """ Decrease count of money. """
+
+        return self.inc(game, wallet, -amount)
+
+    def value(self, wallet: Wallet) -> Money:
+        """ Get count of money in the wallet. """
+
+        self._lock.acquire()
+        try:
+            return wallet.money
+        finally:
+            self._lock.release()
+
+
 class RoundRateModel:
-    @classmethod
-    def round_pre_flop_rate_before_first_turn(cls, game: Game):
-        cls.raise_rate_bet(game, game.active_players[0], SMALL_BLIND)
-        cls.raise_rate_bet(game, game.active_players[1], SMALL_BLIND)
+    def __init__(self, wallet_manager: WalletManagerModel):
+        self._wallet_manager = wallet_manager
+
+    def round_pre_flop_rate_before_first_turn(self, game: Game):
+        self.raise_rate_bet(game, game.active_players[0], SMALL_BLIND)
+        self.raise_rate_bet(game, game.active_players[1], SMALL_BLIND)
 
     @staticmethod
     def round_pre_flop_rate_after_first_turn(game: Game):
         dealer = 2 % len(game.active_players)
         game.trading_end_user_id = game.active_players[dealer].user_id
 
-    @staticmethod
-    def raise_rate_bet(game: Game, player: Player, amount: int) -> None:
+    def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
         amount += game.max_round_rate - player.round_rate
 
-        if amount > player.wallet.money:
-            raise UserException("not enough money")
-
-        player.wallet.money -= amount
+        self._wallet_manager.authorize(
+            game=game,
+            wallet=player.wallet,
+            amount=amount,
+        )
         player.round_rate += amount
 
         game.max_round_rate = player.round_rate
         game.trading_end_user_id = player.user_id
 
-    @staticmethod
-    def call_check(game, player) -> None:
+    def call_check(self, game, player) -> None:
         amount = game.max_round_rate - player.round_rate
 
-        if amount > player.wallet.money:
-            raise UserException("not enough money")
-
-        player.wallet.money -= amount
+        self._wallet_manager.authorize(
+            game=game,
+            wallet=player.wallet,
+            amount=amount,
+        )
         player.round_rate += amount
 
-    @staticmethod
     def finish_rate(
+        self,
         game: Game,
         win_players: List[Tuple[Player, Cards]],
     ) -> List[Tuple[Player, Cards, Money]]:
         res = []
         win_money = game.pot // len(win_players)
         for win_player, best_hand in win_players:
-            win_player.wallet.money += win_money
+            self._wallet_manager.inc(
+                game=game,
+                wallet=win_player.wallet,
+                amount=win_money,
+            )
             res.append((win_player, best_hand, win_money))
         return res
 
-    @staticmethod
-    def to_pot(game) -> None:
+    def to_pot(self, game) -> None:
         for p in game.active_players:
             game.pot += p.round_rate
             p.round_rate = 0
+            self._wallet_manager.approve(
+                game=game,
+                wallet=p.wallet,
+            )
         game.max_round_rate = 0
         game.trading_end_user_id = game.active_players[0].user_id

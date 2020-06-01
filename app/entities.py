@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import enum
-
+from uuid import uuid4
+from collections import defaultdict
 from app.cards import get_cards
 
 DEFAULT_MONEY = 1000
@@ -17,6 +18,7 @@ Money = int
 class Wallet:
     def __init__(self):
         self.money = Money(DEFAULT_MONEY)
+        self.authorized_money = defaultdict(int)
 
 
 class Player:
@@ -38,6 +40,7 @@ class Game:
         self.reset()
 
     def reset(self):
+        self.id = str(uuid4())
         self.pot = 0
         self.max_round_rate = 0
         self.state = GameState.initial
