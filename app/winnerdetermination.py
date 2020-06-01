@@ -28,33 +28,117 @@ class WinnerDetermination:
         hands = list(combinations(cards, 5))
         return hands
 
-    def _calculate_hand_point(self, hand: Cards) -> Score:
-        if self.check_royal_flush(hand) != 0:
-            return self.check_royal_flush(hand)
-        elif self.check_straight_flush(hand) != 0:
-            return self.check_straight_flush(hand)
-        elif self.check_four_of_a_kind(hand) != 0:
-            return self.check_four_of_a_kind(hand)
-        elif self.check_full_house(hand) != 0:
-            return self.check_full_house(hand)
-        elif self.check_flush(hand) != 0:
-            return self.check_flush(hand)
-        elif self.check_straight(hand) != 0:
-            return self.check_straight(hand)
-        elif self.check_three_of_kind(hand) != 0:
-            return self.check_three_of_kind(hand)
-        elif self.check_two_different_pairs(hand) != 0:
-            return self.check_two_different_pairs(hand)
-        elif self.check_pair(hand) != 0:
-            return self.check_pair(hand)
-        elif self.check_high_card(hand) != 0:
-            return self.check_high_card(hand)
+    def _make_values(self, hand):
+        return [i.value for i in hand]
+
+    def _make_suits(self, hand):
+        return [i.suit for i in hand]
+
+    def _calculate_hand_point(
+        self,
+        hand_value: List[int],
+        kinds_poker: HandsOfPoker,
+    ) -> Score:
+        score = HAND_RANK*kinds_poker.value
+        i = 1
+        for val in hand_value:
+            score += val * i
+            i *= 15
+        return score
+
+    def _group_hand(
+        self,
+        hand_values: List[int],
+    ) -> Tuple[List[int], List[int]]:
+        dict_hand = {}
+        for i in hand_values:
+            if i not in dict_hand:
+                dict_hand[i] = 0
+            dict_hand[i] += 1
+
+        sorted_dict_items = sorted(
+            dict_hand.items(),
+            key=lambda x: x[1],
+        )
+
+        hand_values = list(map(lambda x: x[1], sorted_dict_items))
+        hand_keys = list(map(lambda x: x[0], sorted_dict_items))
+        return (hand_values, hand_keys)
+
+    def _check_hand_get_score(self, hand: Cards) -> Score:
+        hand_values = sorted(self._make_values(hand))
+        is_single_suit = len(set(self._make_suits(hand))) == 1
+
+        grouped_values, grouped_keys = self._group_hand(hand_values)
+
+        delta_pos = hand_values[-1] - hand_values[0]
+        is_sequence = (delta_pos == 4) and len(grouped_values) == 5
+
+        # ROYAL_FLUSH.
+        if len(grouped_keys) == 5 and hand_values[0] == 10 and is_single_suit:
+            return self._calculate_hand_point(
+                [], HandsOfPoker.ROYAL_FLUSH
+            )
+
+        # STRAIGHT_FLUSH.
+        elif is_single_suit and is_sequence:
+            return self._calculate_hand_point(
+                [hand_values[-1]], HandsOfPoker.STRAIGHT_FLUSH
+            )
+
+        # FOUR_OF_A_KIND.
+        elif grouped_values == [1, 4]:
+            return self._calculate_hand_point(
+                grouped_keys, HandsOfPoker.FOUR_OF_A_KIND
+            )
+
+        # FULL_HOUSE.
+        elif grouped_values == [2, 3]:
+            return self._calculate_hand_point(
+                grouped_keys, HandsOfPoker.FULL_HOUSE
+            )
+
+        # FLUSH.
+        elif is_single_suit:
+            return self._calculate_hand_point(
+                [hand_values[-1]], HandsOfPoker.FLUSH
+            )
+
+        # STRAIGHTS.
+        elif is_sequence:
+            return self._calculate_hand_point(
+                [hand_values[-1]], HandsOfPoker.STRAIGHTS
+            )
+
+        # THREE_OF_A_KIND.
+        elif grouped_values == [1, 1, 3]:
+            return self._calculate_hand_point(
+                grouped_keys, HandsOfPoker.THREE_OF_A_KIND
+            )
+
+        # TWO_PAIR.
+        elif grouped_values == [1, 2, 2]:
+            return self._calculate_hand_point(
+                grouped_keys, HandsOfPoker.TWO_PAIR
+            )
+
+        # PAIR.
+        elif grouped_values == [1, 1, 1, 2]:
+            return self._calculate_hand_point(
+                grouped_keys, HandsOfPoker.PAIR
+            )
+
+        # HIGH_CARD.
+        else:
+            return self._calculate_hand_point(
+                hand_values, HandsOfPoker.HIGH_CARD
+            )
 
     def _best_hand_score(self, hands) -> Tuple[Cards, Score]:
         best_point = 0
         best_hand = []
         for hand in hands:
-            hand_point = self._calculate_hand_point(hand)
+            hand_point = self._check_hand_get_score(hand)
             if hand_point > best_point:
                 best_hand = hand
                 best_point = hand_point
@@ -76,177 +160,3 @@ class WinnerDetermination:
             res[score].append((player, best_hand))
 
         return res
-
-    def make_value(self, hand):
-        return [i.value for i in hand]
-
-    def make_suit(self, hand):
-        return [i.suit for i in hand]
-
-    # A, K, Q, J, 10, all the same suit
-    def check_royal_flush(self, hand):
-        point = 0
-        hand_value = sorted(set(self.make_value(hand)))
-        hand_suit = set(self.make_suit(hand))
-        min_hand = hand_value[0]
-        if len(hand_value) == 5 and min_hand == 10 and len(hand_suit) == 1:
-            point = HAND_RANK*HandsOfPoker.ROYAL_FLUSH.value
-        return point
-
-    # Five cards in a sequence, all in the same suit
-    def check_straight_flush(self, hand):
-        point = 0
-        hand_value = sorted(set(self.make_value(hand)))
-        hand_suit = set(self.make_suit(hand))
-        if len(hand_value) < 5:
-            return point
-        min_pos = hand_value[0]
-        max_pos = hand_value[4]
-        delta_pos = max_pos - min_pos
-        if len(hand_suit) == 1 and delta_pos == 4:
-            point = (HAND_RANK *
-                     HandsOfPoker.STRAIGHT_FLUSH.value) + hand_value[4]
-        return point
-
-    # All four cards of the same rank
-    def check_four_of_a_kind(self, hand):
-        point = 0
-        dict_hand = {}
-        hand_value = self.make_value(hand)
-        for i in hand_value:
-            if i not in dict_hand:
-                dict_hand[i] = 0
-            dict_hand[i] += 1
-        sort_dict_hand = sorted(
-            dict_hand.items(), key=lambda x: x[1], reverse=True)
-
-        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
-        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
-
-        if sort_dict_hand_value == [4, 1]:
-            i = 2
-            point = HAND_RANK*HandsOfPoker.FOUR_OF_A_KIND.value
-            for k in sort_dict_hand_key:
-                point += k*(15**i)
-                i -= 1
-        return point
-
-    # Three of a kind with a pair
-    def check_full_house(self, hand):
-        point = 0
-        dict_hand = {}
-        hand_value = self.make_value(hand)
-        for i in hand_value:
-            if i not in dict_hand:
-                dict_hand[i] = 0
-            dict_hand[i] += 1
-        sort_dict_hand = sorted(
-            dict_hand.items(), key=lambda x: x[1], reverse=True)
-
-        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
-        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
-        if sort_dict_hand_value == [3, 2]:
-            i = 1
-            point = HAND_RANK*HandsOfPoker.FULL_HOUSE.value
-            for k in sort_dict_hand_key:
-                point += k*(15**i)
-                i -= 1
-        return point
-
-    # Any five cards of the same suit, but not in a sequence
-
-    def check_flush(self, hand):
-        point = 0
-        suit = self.make_suit(hand)
-        hand_value = self.make_value(hand)
-        if len(set(suit)) == 1:
-            point = max(hand_value) + HAND_RANK*HandsOfPoker.FLUSH.value
-        return point
-
-    # Five cards in a sequence, but not of the same suit.
-    def check_straight(self, hand):
-        point = 0
-        hand_value = sorted(set(self.make_value(hand)))
-        if len(hand_value) < 5:
-            return point
-        min_pos = hand_value[0]
-        max_pos = hand_value[4]
-        delta_pos = max_pos - min_pos
-        if delta_pos == 4:
-            point = HAND_RANK*HandsOfPoker.STRAIGHTS.value + hand_value[4]
-        return point
-
-    # Three cards of the same rank
-    def check_three_of_kind(self, hand):
-        point = 0
-        hand_value = self.make_value(hand)
-        dict_hand = {}
-        for i in hand_value:
-            if i not in dict_hand:
-                dict_hand[i] = 0
-            dict_hand[i] += 1
-        sort_dict_hand = sorted(
-            dict_hand.items(), key=lambda x: x[1], reverse=True)
-
-        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
-        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
-        if sort_dict_hand_value == [3, 1, 1]:
-            i = 2
-            point = HAND_RANK*HandsOfPoker.THREE_OF_A_KIND.value
-            for k in sort_dict_hand_key:
-                point += k*(15**i)
-                i -= 1
-        return point
-
-    # Two different pairs.
-    def check_two_different_pairs(self, hand):
-        point = 0
-        hand_value = self.make_value(hand)
-        dict_hand = {}
-        for i in hand_value:
-            if i not in dict_hand:
-                dict_hand[i] = 0
-            dict_hand[i] += 1
-        sort_dict_hand = sorted(
-            dict_hand.items(), key=lambda x: x[1], reverse=True)
-        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
-        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
-        if sort_dict_hand_value == [2, 2, 1]:
-            i = 3
-            point = HAND_RANK*HandsOfPoker.TWO_PAIR.value
-            for k in sort_dict_hand_key:
-                point += k*(15**i)
-                i -= 1
-        return point
-
-    # Two cards of the same rank
-    def check_pair(self, hand):
-        point = 0
-        hand_value = self.make_value(hand)
-        dict_hand = {}
-        for i in hand_value:
-            if i not in dict_hand:
-                dict_hand[i] = 0
-            dict_hand[i] += 1
-        sort_dict_hand = sorted(
-            dict_hand.items(), key=lambda x: x[1], reverse=True)
-
-        sort_dict_hand_value = list(map(lambda x: x[1], sort_dict_hand))
-        sort_dict_hand_key = list(map(lambda x: x[0], sort_dict_hand))
-
-        if sort_dict_hand_value == [2, 1, 1, 1]:
-            i = 3
-            point = HAND_RANK*HandsOfPoker.PAIR.value
-            for k in sort_dict_hand_key:
-                point += k*(15**i)
-                i -= 1
-        return point
-
-    # High Card
-    def check_high_card(self, hand):
-        point = 0
-        hand_value = sorted(self.make_value(hand))
-        hand_value.append(HandsOfPoker.HIGH_CARD.value)
-        for i in range(6):
-            point += hand_value[i]*(15**i)
-        return point
