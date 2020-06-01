@@ -295,6 +295,10 @@ class PokerBotModel:
                 return
 
             fn(update, context)
+            self._view.remove_markup(
+                chat_id=update.effective_message.chat_id,
+                message_id=update.effective_message.message_id,
+            )
 
         return m
 

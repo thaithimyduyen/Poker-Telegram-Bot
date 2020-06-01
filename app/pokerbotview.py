@@ -145,3 +145,13 @@ class PokerBotViewer:
             reply_markup=markup,
             parse_mode=ParseMode.MARKDOWN
         ).message_id
+
+    def remove_markup(
+        self,
+        chat_id: ChatId,
+        message_id: MessageId,
+    ) -> MessageId:
+        return self._bot.edit_message_reply_markup(
+            chat_id=chat_id,
+            message_id=message_id,
+        ).message_id
