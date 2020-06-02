@@ -73,5 +73,11 @@ class PlayerAction(enum.Enum):
     all_in = "all in"
 
 
+class RateBetRaise(enum.Enum):
+    small = 10
+    normal = 25
+    big = 50
+
+
 class UserException(Exception):
     pass

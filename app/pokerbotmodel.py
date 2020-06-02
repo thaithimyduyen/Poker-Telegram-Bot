@@ -17,7 +17,8 @@ from app.entities import (
     UserId,
     UserException,
     Money,
-    Wallet
+    Wallet,
+    RateBetRaise
 )
 from app.pokerbotview import PokerBotViewer
 
@@ -28,7 +29,6 @@ KEY_USER_WALLET = "wallet"
 MAX_PLAYERS = 8
 MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 SMALL_BLIND = 5
-RAISE_RATE = 10
 
 
 class PokerBotModel:
@@ -329,11 +329,15 @@ class PokerBotModel:
         self,
         update: Update,
         context: CallbackContext,
-        action: str
     ) -> None:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
         player = self._current_turn_player(game)
+
+        action = "call"
+        if player.round_rate == game.max_round_rate:
+            action = "check"
+
         self._view.send_message(
             chat_id=chat_id,
             text=f"{self._current_turn_player(game).mention_markdown} {action}"
@@ -353,21 +357,24 @@ class PokerBotModel:
         self,
         update: Update,
         context: CallbackContext,
-        action: str
+        raise_bet_rate: RateBetRaise
     ) -> None:
         game = self._game_from_context(context)
-
         chat_id = update.effective_message.chat_id
-        self._view.send_message(
-            chat_id=chat_id,
-            text=self._current_turn_player(game).mention_markdown +
-            f" {action} {RAISE_RATE}"
-        )
-
         player = self._current_turn_player(game)
 
+        action = "raise"
+        if player.round_rate == game.max_round_rate:
+            action = "bet"
+
+        self._view.send_message(
+            chat_id=chat_id,
+            text=player.mention_markdown +
+            f" {action} {raise_bet_rate.value}$"
+        )
+
         try:
-            self._round_rate.raise_rate_bet(game, player, RAISE_RATE)
+            self._round_rate.raise_rate_bet(game, player, raise_bet_rate.value)
         except UserException as e:
             self._view.send_message(chat_id=chat_id, text=str(e))
             return

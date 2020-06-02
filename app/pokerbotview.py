@@ -8,7 +8,7 @@ from telegram import (
     Bot,
 )
 from telegram.utils.promise import Promise
-from typing import List, Tuple
+from typing import Tuple
 from io import BytesIO
 
 from app.desk import DeskImageGenerator
@@ -21,6 +21,7 @@ from app.entities import (
     ChatId,
     Mention,
     Money,
+    RateBetRaise,
 )
 
 
@@ -76,7 +77,7 @@ class PokerBotViewer:
         )
 
     @staticmethod
-    def _get_turns_markup(change_action: List[str]) -> InlineKeyboardMarkup:
+    def _get_turns_markup(change_action: str) -> InlineKeyboardMarkup:
         keyboard = [[
             InlineKeyboardButton(
                 text=PlayerAction.fold.value,
@@ -85,13 +86,26 @@ class PokerBotViewer:
             InlineKeyboardButton(
                 text=PlayerAction.all_in.value,
                 callback_data=PlayerAction.all_in.value
+            ),
+            InlineKeyboardButton(
+                text=change_action,
+                callback_data=change_action
             )
         ]]
-        for action in change_action:
-            keyboard.append([InlineKeyboardButton(
-                text=action,
-                callback_data=action
-            )])
+        keyboard.append([
+            InlineKeyboardButton(
+                text=str(RateBetRaise.small.value) + "$",
+                callback_data=str(RateBetRaise.small.value)
+            ),
+            InlineKeyboardButton(
+                text=str(RateBetRaise.normal.value) + "$",
+                callback_data=str(RateBetRaise.small.value)
+            ),
+            InlineKeyboardButton(
+                text=str(RateBetRaise.big.value) + "$",
+                callback_data=str(RateBetRaise.small.value)
+            ),
+        ])
 
         return InlineKeyboardMarkup(
             inline_keyboard=keyboard
@@ -117,9 +131,9 @@ class PokerBotViewer:
         player: Player,
     ) -> Tuple[str, str]:
         if player.round_rate == game.max_round_rate:
-            return (PlayerAction.check.value, PlayerAction.bet.value)
+            return PlayerAction.check.value
         else:
-            return (PlayerAction.call.value, PlayerAction.raise_rate.value)
+            return PlayerAction.call.value
 
     def send_turn_actions(
             self,
