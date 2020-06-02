@@ -83,11 +83,6 @@ class PokerBotModel:
             wallet=context.user_data[KEY_USER_WALLET],
         ))
 
-        self._view.send_message(
-            chat_id=chat_id,
-            text=f"{user.mention_markdown()} is ready"
-        )
-
         members_count = self._bot.get_chat_members_count(chat_id)
         players_active = len(game.active_players)
         # One is the bot.
