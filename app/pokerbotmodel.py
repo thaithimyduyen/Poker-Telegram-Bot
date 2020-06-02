@@ -3,6 +3,7 @@
 import os
 
 from typing import List, Tuple
+from threading import Lock
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
 
@@ -34,13 +35,20 @@ class PokerBotModel:
     def __init__(self, view: PokerBotViewer, bot: Bot):
         self._view = view
         self._bot = bot
-        self._round_rate = RoundRateModel()
+        self._wallet_manager = WalletManagerModel()
+        self._round_rate = RoundRateModel(self._wallet_manager)
         self._winner_determine = WinnerDetermination()
 
-    def _game_from_context(self, context: CallbackContext) -> Game:
+    @staticmethod
+    def _game_from_context(context: CallbackContext) -> Game:
         if KEY_CHAT_DATA_GAME not in context.chat_data:
             context.chat_data[KEY_CHAT_DATA_GAME] = Game()
         return context.chat_data[KEY_CHAT_DATA_GAME]
+
+    @staticmethod
+    def _current_turn_player(game: Game) -> Player:
+        i = game.current_player_index % len(game.active_players)
+        return game.active_players[i]
 
     def ready(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
@@ -120,7 +128,7 @@ class PokerBotModel:
     def _start_game(self, game: Game, chat_id: ChatId) -> None:
         game.state = GameState.round_pre_flop
         self._divide_cards(game=game, chat_id=chat_id,)
-        self._view.send_message(chat_id=chat_id, text="*Game is created!!*")
+        self._view.send_message(chat_id=chat_id, text="*Game is started!!*")
 
         game.current_player_index = 1
         self._round_rate.round_pre_flop_rate_before_first_turn(game)
@@ -167,10 +175,6 @@ class PokerBotModel:
                 mention_markdown=player.mention_markdown,
             )
 
-    def _current_turn_player(self, game: Game) -> Player:
-        i = game.current_player_index % len(game.active_players)
-        return game.active_players[i]
-
     def _process_playing(self, chat_id: ChatId, game: Game) -> None:
         if len(game.active_players) == 1:
             self._finish(game, chat_id)
@@ -184,7 +188,7 @@ class PokerBotModel:
             self._goto_next_round(game, chat_id)
             game.current_player_index = 0
 
-        if game.state == GameState.finished:
+        if game.state == GameState.initial:
             return
 
         player = self._current_turn_player(game)
@@ -192,6 +196,7 @@ class PokerBotModel:
             chat_id=chat_id,
             game=game,
             player=player,
+            money=self._wallet_manager.value(player.wallet),
         )
 
     def add_cards_to_table(
@@ -299,16 +304,21 @@ class PokerBotModel:
 
     def fold(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
+        player = self._current_turn_player(game)
 
-        self._view.send_message(
-            chat_id=update.effective_message.chat_id,
-            text=f"{self._current_turn_player(game).mention_markdown} folded"
+        self._wallet_manager.approve(
+            game=game,
+            wallet=player.wallet,
         )
-
-        game.pot += self._current_turn_player(game).round_rate
+        game.pot += player.round_rate
 
         del game.active_players[game.current_player_index]
         game.current_player_index -= 1
+
+        self._view.send_message(
+            chat_id=update.effective_message.chat_id,
+            text=f"{player.mention_markdown} folded"
+        )
 
         self._process_playing(
             chat_id=update.effective_message.chat_id,
@@ -368,22 +378,69 @@ class PokerBotModel:
         pass
 
 
+class WalletManagerModel:
+    def __init__(self):
+        self._lock = Lock()
+
+    def inc(self, game: Game, wallet: Wallet, amount: Money = 0) -> None:
+        """ Increase count of money in the wallet.
+            Decrease authorized money.
+        """
+
+        self._lock.acquire()
+        try:
+            if wallet.money + amount < 0:
+                raise UserException("not enough money")
+            wallet.money += amount
+            wallet.authorized_money[game.id] -= amount
+        finally:
+            self._lock.release()
+
+    def approve(self, game: Game, wallet: Wallet) -> None:
+        """ Approve authorized money. """
+
+        self._lock.acquire()
+        try:
+            wallet.authorized_money[game.id] = 0
+        finally:
+            self._lock.release()
+
+    def authorize(self, game: Game, wallet: Wallet, amount: Money) -> None:
+        """ Decrease count of money. """
+
+        return self.inc(game, wallet, -amount)
+
+    def value(self, wallet: Wallet) -> Money:
+        """ Get count of money in the wallet. """
+
+        self._lock.acquire()
+        try:
+            return wallet.money
+        finally:
+            self._lock.release()
+
+
 class RoundRateModel:
-    def round_pre_flop_rate_before_first_turn(self, game):
+    def __init__(self, wallet_manager: WalletManagerModel):
+        self._wallet_manager = wallet_manager
+
+    def round_pre_flop_rate_before_first_turn(self, game: Game):
         self.raise_rate_bet(game, game.active_players[0], SMALL_BLIND)
         self.raise_rate_bet(game, game.active_players[1], SMALL_BLIND)
 
-    def round_pre_flop_rate_after_first_turn(self, game):
+    @staticmethod
+    def round_pre_flop_rate_after_first_turn(game: Game):
         dealer = 2 % len(game.active_players)
         game.trading_end_user_id = game.active_players[dealer].user_id
 
     def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
         amount += game.max_round_rate - player.round_rate
 
-        if amount > player.wallet.money:
-            raise UserException("not enough money")
-
-        player.wallet.money -= amount
+        self._wallet_manager.authorize(
+            game=game,
+            wallet=player.wallet,
+            amount=amount,
+        )
         player.round_rate += amount
 
         game.max_round_rate = player.round_rate
@@ -392,10 +449,11 @@ class RoundRateModel:
     def call_check(self, game, player) -> None:
         amount = game.max_round_rate - player.round_rate
 
-        if amount > player.wallet.money:
-            raise UserException("not enough money")
-
-        player.wallet.money -= amount
+        self._wallet_manager.authorize(
+            game=game,
+            wallet=player.wallet,
+            amount=amount,
+        )
         player.round_rate += amount
 
     def finish_rate(
@@ -406,7 +464,11 @@ class RoundRateModel:
         res = []
         win_money = game.pot // len(win_players)
         for win_player, best_hand in win_players:
-            win_player.wallet.money += win_money
+            self._wallet_manager.inc(
+                game=game,
+                wallet=win_player.wallet,
+                amount=win_money,
+            )
             res.append((win_player, best_hand, win_money))
         return res
 
@@ -414,5 +476,9 @@ class RoundRateModel:
         for p in game.active_players:
             game.pot += p.round_rate
             p.round_rate = 0
+            self._wallet_manager.approve(
+                game=game,
+                wallet=p.wallet,
+            )
         game.max_round_rate = 0
         game.trading_end_user_id = game.active_players[0].user_id

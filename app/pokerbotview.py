@@ -7,6 +7,8 @@ from telegram import (
     ReplyKeyboardMarkup,
     Bot,
 )
+from telegram.utils.promise import Promise
+from typing import List, Tuple
 from io import BytesIO
 
 from app.desk import DeskImageGenerator
@@ -18,6 +20,7 @@ from app.entities import (
     MessageId,
     ChatId,
     Mention,
+    Money,
 )
 
 
@@ -26,25 +29,25 @@ class PokerBotViewer:
         self._bot = bot
         self._desk_generator = DeskImageGenerator()
 
-    def send_message(self, chat_id: ChatId, text: str) -> MessageId:
+    def send_message(self, chat_id: ChatId, text: str) -> Promise:
         return self._bot.send_message(
             chat_id=chat_id,
             parse_mode=ParseMode.MARKDOWN,
             text=text,
-        ).message_id
+        )
 
     def send_message_reply(
         self,
         chat_id: ChatId,
         message_id: MessageId,
         text: str,
-    ) -> MessageId:
+    ) -> Promise:
         return self._bot.send_message(
             reply_to_message_id=message_id,
             chat_id=chat_id,
             parse_mode=ParseMode.MARKDOWN,
             text=text,
-        ).message_id
+        )
 
     def send_desk_cards_img(
         self,
@@ -73,7 +76,7 @@ class PokerBotViewer:
         )
 
     @staticmethod
-    def _get_turns_markup(change_action: list) -> InlineKeyboardMarkup:
+    def _get_turns_markup(change_action: List[str]) -> InlineKeyboardMarkup:
         keyboard = [[
             InlineKeyboardButton(
                 text=PlayerAction.fold.value,
@@ -99,28 +102,32 @@ class PokerBotViewer:
             chat_id: ChatId,
             cards: Cards,
             mention_markdown: Mention,
-    ) -> MessageId:
+    ) -> Promise:
         markup = PokerBotViewer._get_cards_markup(cards)
         return self._bot.send_message(
             chat_id=chat_id,
             text="Showing cards to " + mention_markdown,
             reply_markup=markup,
             parse_mode=ParseMode.MARKDOWN
-        ).message_id
+        )
 
     @staticmethod
-    def define_change_action(game: Game, player: Player):
+    def define_change_action(
+        game: Game,
+        player: Player,
+    ) -> Tuple[str, str]:
         if player.round_rate == game.max_round_rate:
-            return [PlayerAction.check.value, PlayerAction.bet.value]
+            return (PlayerAction.check.value, PlayerAction.bet.value)
         else:
-            return [PlayerAction.call.value, PlayerAction.raise_rate.value]
+            return (PlayerAction.call.value, PlayerAction.raise_rate.value)
 
     def send_turn_actions(
             self,
             chat_id: ChatId,
             game: Game,
             player: Player,
-    ) -> MessageId:
+            money: Money,
+    ) -> Promise:
         if len(game.cards_table) == 0:
             cards_table = "no cards"
         else:
@@ -129,12 +136,12 @@ class PokerBotViewer:
             "{}, it is your turn\n" +
             "Cards on the table: \n" +
             "{}\n" +
-            "Your money: *{}$*\n " +
+            "Your money: *{}$*\n" +
             "Max round rate: *{}$*"
         ).format(
             player.mention_markdown,
             cards_table,
-            player.wallet.money,
+            money,
             game.max_round_rate,
         )
         change_action = PokerBotViewer.define_change_action(game, player)
@@ -144,14 +151,14 @@ class PokerBotViewer:
             text=text,
             reply_markup=markup,
             parse_mode=ParseMode.MARKDOWN
-        ).message_id
+        )
 
     def remove_markup(
         self,
         chat_id: ChatId,
         message_id: MessageId,
-    ) -> MessageId:
+    ) -> Promise:
         return self._bot.edit_message_reply_markup(
             chat_id=chat_id,
             message_id=message_id,
-        ).message_id
+        )
