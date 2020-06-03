@@ -51,21 +51,21 @@ class PokerBotCotroller:
         context: CallbackContext,
     ) -> None:
         query_data = update.callback_query.data
-        if query_data == PlayerAction.check.value:
+        if query_data == PlayerAction.CHECK.value:
             self._model.call_check(update, context)
-        elif query_data == PlayerAction.call.value:
+        elif query_data == PlayerAction.CALL.value:
             self._model.call_check(update, context)
-        elif query_data == PlayerAction.fold.value:
+        elif query_data == PlayerAction.FOLD.value:
             self._model.fold(update, context)
-        elif query_data == str(PlayerAction.small.value):
+        elif query_data == str(PlayerAction.SMALL.value):
             self._model.raise_rate_bet(
-                update, context, PlayerAction.small
+                update, context, PlayerAction.SMALL
             )
-        elif query_data == str(PlayerAction.normal.value):
+        elif query_data == str(PlayerAction.NORMAL.value):
             self._model.raise_rate_bet(
-                update, context, PlayerAction.normal
+                update, context, PlayerAction.NORMAL
             )
-        elif query_data == str(PlayerAction.big.value):
-            self._model.raise_rate_bet(update, context, PlayerAction.big)
-        elif query_data == PlayerAction.all_in.value:
+        elif query_data == str(PlayerAction.BIG.value):
+            self._model.raise_rate_bet(update, context, PlayerAction.BIG)
+        elif query_data == PlayerAction.ALL_IN.value:
             self._model.all_in(update, context)

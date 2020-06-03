@@ -56,24 +56,30 @@ class Game:
 
 
 class GameState(enum.Enum):
-    initial = 0
-    round_pre_flop = 1  # No cards on the table.
-    round_flop = 2  # Three cards.
-    round_turn = 3  # Four cards.
-    round_river = 4  # Five cards.
-    finished = 5  # The end.
+    INITIAL = 0
+    ROUND_PRE_FLOP = 1  # No cards on the table.
+    ROUND_FLOP = 2  # Three cards.
+    ROUND_TURN = 3  # Four cards.
+    ROUND_RIVER = 4  # Five cards.
+    FINISHED = 5  # The end.
 
 
 class PlayerAction(enum.Enum):
-    check = "check"
-    call = "call"
-    fold = "fold"
-    raise_rate = "raise rate"
-    bet = "bet"
-    all_in = "all in"
-    small = 10
-    normal = 25
-    big = 50
+    CHECK = "check"
+    CALL = "call"
+    FOLD = "fold"
+    RAISE_RATE = "raise rate"
+    BET = "bet"
+    ALL_IN = "all in"
+    SMALL = 10
+    NORMAL = 25
+    BIG = 50
+
+
+class PlayerState(enum.Enum):
+    ACTIVE = 1
+    FOLD = 0
+    ALL_IN = 10
 
 
 class UserException(Exception):

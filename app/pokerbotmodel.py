@@ -54,7 +54,7 @@ class PokerBotModel:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
 
-        if game.state != GameState.initial:
+        if game.state != GameState.INITIAL:
             self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=update.effective_message.message_id,
@@ -126,7 +126,7 @@ class PokerBotModel:
         self._start_game(game=game, chat_id=chat_id)
 
     def _start_game(self, game: Game, chat_id: ChatId) -> None:
-        game.state = GameState.round_pre_flop
+        game.state = GameState.ROUND_PRE_FLOP
         self._divide_cards(game=game, chat_id=chat_id,)
 
         game.current_player_index = 1
@@ -187,7 +187,7 @@ class PokerBotModel:
             self._goto_next_round(game, chat_id)
             game.current_player_index = 0
 
-        if game.state == GameState.initial:
+        if game.state == GameState.INITIAL:
             return
 
         player = self._current_turn_player(game)
@@ -257,20 +257,20 @@ class PokerBotModel:
             )
 
         state_transitions = {
-            GameState.round_pre_flop: {
-                "next_state": GameState.round_flop,
+            GameState.ROUND_PRE_FLOP: {
+                "next_state": GameState.ROUND_FLOP,
                 "processor": lambda: add_cards(3),
             },
-            GameState.round_flop: {
-                "next_state": GameState.round_turn,
+            GameState.ROUND_FLOP: {
+                "next_state": GameState.ROUND_TURN,
                 "processor": lambda: add_cards(1),
             },
-            GameState.round_turn: {
-                "next_state": GameState.round_river,
+            GameState.ROUND_TURN: {
+                "next_state": GameState.ROUND_RIVER,
                 "processor": lambda: add_cards(1),
             },
-            GameState.round_river: {
-                "next_state": GameState.finished,
+            GameState.ROUND_RIVER: {
+                "next_state": GameState.FINISHED,
                 "processor": lambda: self._finish(game, chat_id),
             }
         }
@@ -285,7 +285,7 @@ class PokerBotModel:
     def middleware_user_turn(self, fn: Handler) -> Handler:
         def m(update, context):
             game = self._game_from_context(context)
-            if game.state == GameState.initial:
+            if game.state == GameState.INITIAL:
                 return
 
             current_player = self._current_turn_player(game)

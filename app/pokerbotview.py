@@ -80,12 +80,12 @@ class PokerBotViewer:
     ) -> InlineKeyboardMarkup:
         keyboard = [[
             InlineKeyboardButton(
-                text=PlayerAction.fold.value,
-                callback_data=PlayerAction.fold.value,
+                text=PlayerAction.FOLD.value,
+                callback_data=PlayerAction.FOLD.value,
             ),
             InlineKeyboardButton(
-                text=PlayerAction.all_in.value,
-                callback_data=PlayerAction.all_in.value,
+                text=PlayerAction.ALL_IN.value,
+                callback_data=PlayerAction.ALL_IN.value,
             ),
             InlineKeyboardButton(
                 text=check_call_action.value,
@@ -93,16 +93,16 @@ class PokerBotViewer:
             ),
         ], [
             InlineKeyboardButton(
-                text=str(PlayerAction.small.value) + "$",
-                callback_data=str(PlayerAction.small.value)
+                text=str(PlayerAction.SMALL.value) + "$",
+                callback_data=str(PlayerAction.SMALL.value)
             ),
             InlineKeyboardButton(
-                text=str(PlayerAction.normal.value) + "$",
-                callback_data=str(PlayerAction.normal.value)
+                text=str(PlayerAction.NORMAL.value) + "$",
+                callback_data=str(PlayerAction.NORMAL.value)
             ),
             InlineKeyboardButton(
-                text=str(PlayerAction.big.value) + "$",
-                callback_data=str(PlayerAction.big.value)
+                text=str(PlayerAction.BIG.value) + "$",
+                callback_data=str(PlayerAction.BIG.value)
             ),
         ]]
 
@@ -130,8 +130,8 @@ class PokerBotViewer:
         player: Player,
     ) -> PlayerAction:
         if player.round_rate == game.max_round_rate:
-            return PlayerAction.check
-        return PlayerAction.call
+            return PlayerAction.CHECK
+        return PlayerAction.CALL
 
     def send_turn_actions(
             self,
