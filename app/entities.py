@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import enum
+from typing import Tuple, List
 from uuid import uuid4
 from collections import defaultdict
 from app.cards import get_cards
@@ -30,9 +31,16 @@ class Player:
     ):
         self.user_id = user_id
         self.mention_markdown = mention_markdown
+        self.state = PlayerState.ACTIVE
         self.wallet = wallet
         self.cards = []
         self.round_rate = 0
+
+
+class PlayerState(enum.Enum):
+    ACTIVE = 1
+    FOLD = 0
+    ALL_IN = 10
 
 
 class Game:
@@ -43,13 +51,16 @@ class Game:
         self.id = str(uuid4())
         self.pot = 0
         self.max_round_rate = 0
-        self.state = GameState.initial
-        self.active_players = []
+        self.state = GameState.INITIAL
+        self.players = []
         self.cards_table = []
         self.current_player_index = -1
         self.remain_cards = get_cards()
         self.trading_end_user_id = 0
         self.ready_users = set()
+
+    def players_by(self, states: Tuple[PlayerState]) -> List[Player]:
+        return list(filter(lambda p: p.state in states, self.players))
 
     def __repr__(self):
         return "{}({!r})".format(self.__class__.__name__, self.__dict__)
@@ -74,12 +85,6 @@ class PlayerAction(enum.Enum):
     SMALL = 10
     NORMAL = 25
     BIG = 50
-
-
-class PlayerState(enum.Enum):
-    ACTIVE = 1
-    FOLD = 0
-    ALL_IN = 10
 
 
 class UserException(Exception):
