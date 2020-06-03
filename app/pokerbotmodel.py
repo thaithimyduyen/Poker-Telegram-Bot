@@ -18,7 +18,7 @@ from app.entities import (
     UserException,
     Money,
     Wallet,
-    RateBetRaise
+    PlayerAction
 )
 from app.pokerbotview import PokerBotViewer
 
@@ -128,7 +128,6 @@ class PokerBotModel:
     def _start_game(self, game: Game, chat_id: ChatId) -> None:
         game.state = GameState.round_pre_flop
         self._divide_cards(game=game, chat_id=chat_id,)
-        self._view.send_message(chat_id=chat_id, text="*Game is started!!*")
 
         game.current_player_index = 1
         self._round_rate.round_pre_flop_rate_before_first_turn(game)
@@ -317,7 +316,7 @@ class PokerBotModel:
 
         self._view.send_message(
             chat_id=update.effective_message.chat_id,
-            text=f"{player.mention_markdown} folded"
+            text=f"{player.mention_markdown} {PlayerAction.fold.value}"
         )
 
         self._process_playing(
@@ -334,9 +333,9 @@ class PokerBotModel:
         chat_id = update.effective_message.chat_id
         player = self._current_turn_player(game)
 
-        action = "call"
+        action = PlayerAction.call.value
         if player.round_rate == game.max_round_rate:
-            action = "check"
+            action = PlayerAction.check.value
 
         self._view.send_message(
             chat_id=chat_id,
@@ -357,20 +356,20 @@ class PokerBotModel:
         self,
         update: Update,
         context: CallbackContext,
-        raise_bet_rate: RateBetRaise
+        raise_bet_rate: PlayerAction
     ) -> None:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
         player = self._current_turn_player(game)
 
-        action = "raise"
+        action = PlayerAction.raise_rate
         if player.round_rate == game.max_round_rate:
-            action = "bet"
+            action = PlayerAction.bet
 
         self._view.send_message(
             chat_id=chat_id,
             text=player.mention_markdown +
-            f" {action} {raise_bet_rate.value}$"
+            f" {action.value} {raise_bet_rate.value}$"
         )
 
         try:

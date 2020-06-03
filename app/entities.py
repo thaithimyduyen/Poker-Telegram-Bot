@@ -71,9 +71,6 @@ class PlayerAction(enum.Enum):
     raise_rate = "raise rate"
     bet = "bet"
     all_in = "all in"
-
-
-class RateBetRaise(enum.Enum):
     small = 10
     normal = 25
     big = 50

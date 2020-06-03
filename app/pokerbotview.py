@@ -8,7 +8,6 @@ from telegram import (
     Bot,
 )
 from telegram.utils.promise import Promise
-from typing import Tuple
 from io import BytesIO
 
 from app.desk import DeskImageGenerator
@@ -21,7 +20,6 @@ from app.entities import (
     ChatId,
     Mention,
     Money,
-    RateBetRaise,
 )
 
 
@@ -77,35 +75,36 @@ class PokerBotViewer:
         )
 
     @staticmethod
-    def _get_turns_markup(change_action: str) -> InlineKeyboardMarkup:
+    def _get_turns_markup(
+        check_call_action: PlayerAction
+    ) -> InlineKeyboardMarkup:
         keyboard = [[
             InlineKeyboardButton(
                 text=PlayerAction.fold.value,
-                callback_data=PlayerAction.fold.value
+                callback_data=PlayerAction.fold.value,
             ),
             InlineKeyboardButton(
                 text=PlayerAction.all_in.value,
-                callback_data=PlayerAction.all_in.value
+                callback_data=PlayerAction.all_in.value,
             ),
             InlineKeyboardButton(
-                text=change_action,
-                callback_data=change_action
-            )
+                text=check_call_action.value,
+                callback_data=check_call_action.value,
+            ),
+        ], [
+            InlineKeyboardButton(
+                text=str(PlayerAction.small.value) + "$",
+                callback_data=str(PlayerAction.small.value)
+            ),
+            InlineKeyboardButton(
+                text=str(PlayerAction.normal.value) + "$",
+                callback_data=str(PlayerAction.normal.value)
+            ),
+            InlineKeyboardButton(
+                text=str(PlayerAction.big.value) + "$",
+                callback_data=str(PlayerAction.big.value)
+            ),
         ]]
-        keyboard.append([
-            InlineKeyboardButton(
-                text=str(RateBetRaise.small.value) + "$",
-                callback_data=str(RateBetRaise.small.value)
-            ),
-            InlineKeyboardButton(
-                text=str(RateBetRaise.normal.value) + "$",
-                callback_data=str(RateBetRaise.small.value)
-            ),
-            InlineKeyboardButton(
-                text=str(RateBetRaise.big.value) + "$",
-                callback_data=str(RateBetRaise.small.value)
-            ),
-        ])
 
         return InlineKeyboardMarkup(
             inline_keyboard=keyboard
@@ -126,14 +125,13 @@ class PokerBotViewer:
         )
 
     @staticmethod
-    def define_change_action(
+    def define_check_call_action(
         game: Game,
         player: Player,
-    ) -> Tuple[str, str]:
+    ) -> PlayerAction:
         if player.round_rate == game.max_round_rate:
-            return PlayerAction.check.value
-        else:
-            return PlayerAction.call.value
+            return PlayerAction.check
+        return PlayerAction.call
 
     def send_turn_actions(
             self,
@@ -158,8 +156,10 @@ class PokerBotViewer:
             money,
             game.max_round_rate,
         )
-        change_action = PokerBotViewer.define_change_action(game, player)
-        markup = PokerBotViewer._get_turns_markup(change_action)
+        check_call_action = PokerBotViewer.define_check_call_action(
+            game, player
+        )
+        markup = PokerBotViewer._get_turns_markup(check_call_action)
         return self._bot.send_message(
             chat_id=chat_id,
             text=text,

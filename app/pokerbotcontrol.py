@@ -8,7 +8,7 @@ from telegram.ext import (
     Updater,
 )
 
-from app.entities import PlayerAction, RateBetRaise
+from app.entities import PlayerAction
 from app.pokerbotmodel import PokerBotModel
 
 
@@ -57,13 +57,15 @@ class PokerBotCotroller:
             self._model.call_check(update, context)
         elif query_data == PlayerAction.fold.value:
             self._model.fold(update, context)
-        elif query_data == str(RateBetRaise.small.value):
+        elif query_data == str(PlayerAction.small.value):
             self._model.raise_rate_bet(
-                update, context, RateBetRaise.small)
-        elif query_data == str(RateBetRaise.normal.value):
+                update, context, PlayerAction.small
+            )
+        elif query_data == str(PlayerAction.normal.value):
             self._model.raise_rate_bet(
-                update, context, RateBetRaise.normal)
-        elif query_data == str(RateBetRaise.big.value):
-            self._model.raise_rate_bet(update, context, RateBetRaise.big)
+                update, context, PlayerAction.normal
+            )
+        elif query_data == str(PlayerAction.big.value):
+            self._model.raise_rate_bet(update, context, PlayerAction.big)
         elif query_data == PlayerAction.all_in.value:
             self._model.all_in(update, context)
