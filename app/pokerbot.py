@@ -18,11 +18,11 @@ class PokerBot:
         state_file: str = "./state.dat"
     ):
         req = Request(proxy_url=proxy_url, con_pool_size=8)
-        msg_queue = mq.MessageQueue(
-            all_burst_limit=20,
-            all_time_limit_ms=60000,
-        )
-        bot = MQBot(token=token, request=req, msg_queue=msg_queue)
+        # msg_queue = mq.MessageQueue(
+        #     all_burst_limit=20,
+        #     all_time_limit_ms=60000,
+        # )
+        bot = Bot(token=token, request=req)
 
         self._persistence = PicklePersistence(
             state_file,
