@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import unittest
 
 from typing import Tuple
@@ -10,20 +12,22 @@ HANDS_FILE = "./tests/hands.txt"
 
 
 class TestWinnerDetermination(unittest.TestCase):
-    def parse_hands(line: str) -> Tuple[Cards]:
+    @classmethod
+    def _parse_hands(cls, line: str) -> Tuple[Cards]:
         """ The first hand is the best """
 
         line_toks = line.split()
 
-        first_hand = TestWinnerDetermination.parse_hand(line_toks[0])
-        second_hand = TestWinnerDetermination.parse_hand(line_toks[1])
+        first_hand = cls._parse_hand(line_toks[0])
+        second_hand = cls._parse_hand(line_toks[1])
 
         if line_toks[2] == "2":
             return (second_hand, first_hand)
 
         return (first_hand, second_hand)
 
-    def parse_hand(hand: str) -> Cards:
+    @staticmethod
+    def _parse_hand(hand: str) -> Cards:
         return [Card(c) for c in hand.split("'")]
 
     def test_determine_best_hand(self):
@@ -36,7 +40,7 @@ class TestWinnerDetermination(unittest.TestCase):
 
         determinator = WinnerDetermination()
         for l in game_lines:
-            hands = TestWinnerDetermination.parse_hands(l)
+            hands = TestWinnerDetermination._parse_hands(l)
             got_best_hand = determinator._best_hand_score(hands)[0]
             self.assertListEqual(list1=got_best_hand, list2=hands[0])
 

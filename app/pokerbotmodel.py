@@ -2,7 +2,7 @@
 
 import os
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from threading import Lock
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
@@ -20,6 +20,7 @@ from app.entities import (
     Wallet,
     PlayerAction,
     PlayerState,
+    Score,
 )
 from app.pokerbotview import PokerBotViewer
 
@@ -258,10 +259,9 @@ class PokerBotModel:
             cards_table=game.cards_table,
         )
 
-        max_score = max(player_scores)
         winners_hand_money = self._round_rate.finish_rate(
             game=game,
-            win_players=player_scores[max_score],
+            win_players=player_scores,
         )
 
         only_one_player = len(active_players) == 1
@@ -450,8 +450,12 @@ class WalletManagerModel:
         try:
             if wallet.money + amount < 0:
                 raise UserException("not enough money")
+
             wallet.money += amount
+
             wallet.authorized_money[game.id] -= amount
+            authorized = wallet.authorized_money[game.id]
+            wallet.authorized_money[game.id] = max(0, authorized)
         finally:
             self._lock.release()
 
@@ -498,8 +502,7 @@ class RoundRateModel:
         self.raise_rate_bet(game, game.players[0], SMALL_BLIND)
         self.raise_rate_bet(game, game.players[1], SMALL_BLIND)
 
-    @staticmethod
-    def round_pre_flop_rate_after_first_turn(game: Game):
+    def round_pre_flop_rate_after_first_turn(self, game: Game):
         dealer = 2 % len(game.players)
         game.trading_end_user_id = game.players[dealer].user_id
 
@@ -540,8 +543,10 @@ class RoundRateModel:
     def finish_rate(
         self,
         game: Game,
-        win_players: List[Tuple[Player, Cards]],
+        player_scores: Dict[Score, List[Tuple[Player, Cards]]],
     ) -> List[Tuple[Player, Cards, Money]]:
+        win_players = player_scores[max(player_scores)]
+
         res = []
         win_money = game.pot // len(win_players)
         for win_player, best_hand in win_players:
@@ -551,6 +556,11 @@ class RoundRateModel:
                 amount=win_money,
             )
             res.append((win_player, best_hand, win_money))
+
+        for players in player_scores.values():
+            for p in players:
+                self._wallet_manager.approve(game, p[0].wallet)
+
         return res
 
     def to_pot(self, game) -> None:
