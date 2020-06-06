@@ -86,6 +86,7 @@ class MessageDelayBot(Bot):
             target=self._tasks_manager_loop,
             args=(self._stop_chat_tasks, ),
         )
+        # TODO: Add @decorator to functions in view?
 
     def run_tasks_manager(self) -> None:
         self._chat_tasks_thread.start()
@@ -163,3 +164,31 @@ class MessageDelayBot(Bot):
             task=lambda:
                 super(MessageDelayBot, self).send_message(*args, **kwargs),
         )
+
+    def edit_message_reply_markup(self, *args, **kwargs) -> None:
+        def task():
+            super(MessageDelayBot, self).edit_message_reply_markup(
+                *args,
+                **kwargs,
+            )
+
+        try:
+            task()
+        except (
+            TimedOut,
+            NetworkError,
+            RetryAfter
+        ):
+            self._add_task(
+                chat_id=kwargs.get("chat_id", 0),
+                task=task,
+            )
+        except (
+            BadRequest,
+            ChatMigrated,
+            Conflict,
+            InvalidToken,
+            TelegramError,
+            Unauthorized,
+        ) as e:
+            logging.error(e)

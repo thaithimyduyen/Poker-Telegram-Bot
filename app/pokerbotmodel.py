@@ -197,11 +197,13 @@ class PokerBotModel:
             self._goto_next_round(game, chat_id)
 
             game.current_player_index = 0
-            current_player = self._current_turn_player(game)
 
         # Game finished.
         if game.state == GameState.INITIAL:
             return
+
+        # Player could be changed.
+        current_player = self._current_turn_player(game)
 
         current_player_money = self._wallet_manager.value(
             current_player.wallet,
