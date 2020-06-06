@@ -21,6 +21,9 @@ class Wallet:
         self.money = Money(DEFAULT_MONEY)
         self.authorized_money = defaultdict(int)
 
+    def __repr__(self):
+        return "{}({!r})".format(self.__class__.__name__, self.__dict__)
+
 
 class Player:
     def __init__(
@@ -35,6 +38,9 @@ class Player:
         self.wallet = wallet
         self.cards = []
         self.round_rate = 0
+
+    def __repr__(self):
+        return "{}({!r})".format(self.__class__.__name__, self.__dict__)
 
 
 class PlayerState(enum.Enum):

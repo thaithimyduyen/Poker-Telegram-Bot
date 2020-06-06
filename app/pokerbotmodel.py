@@ -202,10 +202,11 @@ class PokerBotModel:
             return
 
         current_player_money = self._wallet_manager.value(
-            current_player.wallet)
+            current_player.wallet,
+        )
 
         # Player do not have monery so make it ALL_IN.
-        if current_player_money == 0:
+        if current_player_money <= 0:
             current_player.state = PlayerState.ALL_IN
 
         # Skip inactive players.
@@ -240,7 +241,7 @@ class PokerBotModel:
         self._view.send_desk_cards_img(
             chat_id=chat_id,
             cards=game.cards_table,
-            caption=f"*Current_pot:* {game.pot}$",
+            caption=f"*Current pot:* {game.pot}$",
         )
 
     def _finish(
@@ -261,7 +262,7 @@ class PokerBotModel:
 
         winners_hand_money = self._round_rate.finish_rate(
             game=game,
-            win_players=player_scores,
+            player_scores=player_scores,
         )
 
         only_one_player = len(active_players) == 1
@@ -348,12 +349,6 @@ class PokerBotModel:
     def fold(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
         player = self._current_turn_player(game)
-
-        self._wallet_manager.approve(
-            game=game,
-            wallet=player.wallet,
-        )
-        game.pot += player.round_rate
 
         player.state = PlayerState.FOLD
 
@@ -453,8 +448,7 @@ class WalletManagerModel:
 
             wallet.money += amount
 
-            wallet.authorized_money[game.id] -= amount
-            authorized = wallet.authorized_money[game.id]
+            authorized = wallet.authorized_money[game.id] - amount
             wallet.authorized_money[game.id] = max(0, authorized)
         finally:
             self._lock.release()
@@ -498,11 +492,11 @@ class RoundRateModel:
     def __init__(self, wallet_manager: WalletManagerModel):
         self._wallet_manager = wallet_manager
 
-    def round_pre_flop_rate_before_first_turn(self, game: Game):
+    def round_pre_flop_rate_before_first_turn(self, game: Game) -> None:
         self.raise_rate_bet(game, game.players[0], SMALL_BLIND)
         self.raise_rate_bet(game, game.players[1], SMALL_BLIND)
 
-    def round_pre_flop_rate_after_first_turn(self, game: Game):
+    def round_pre_flop_rate_after_first_turn(self, game: Game) -> None:
         dealer = 2 % len(game.players)
         game.trading_end_user_id = game.players[dealer].user_id
 
@@ -564,16 +558,19 @@ class RoundRateModel:
             map(lambda x: x[1], sorted_player_scores_items))
 
         res = []
-
         for win_players in player_scores_values:
             players_authorized = self._sum_authorized_money(
                 game=game,
                 players=win_players,
             )
+            if players_authorized <= 0:
+                continue
+
             game_pot = game.pot
             for win_player, best_hand in win_players:
                 if game.pot <= 0:
                     break
+
                 authorized = win_player.wallet.authorized_money[game.id]
 
                 win_money_real = game_pot * (authorized / players_authorized)
@@ -599,9 +596,5 @@ class RoundRateModel:
         for p in game.players:
             game.pot += p.round_rate
             p.round_rate = 0
-            self._wallet_manager.approve(
-                game=game,
-                wallet=p.wallet,
-            )
         game.max_round_rate = 0
         game.trading_end_user_id = game.players[0].user_id
