@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 
-import logging
 import sys
 from signal import signal, SIGINT
 
 from app.pokerbot import PokerBot
 
 TOKEN_FILE = "./token.txt"
-
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
 
 
 def main() -> None:

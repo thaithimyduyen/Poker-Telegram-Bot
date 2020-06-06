@@ -195,7 +195,9 @@ class PokerBotModel:
         if current_player.user_id == game.trading_end_user_id:
             self._round_rate.to_pot(game)
             self._goto_next_round(game, chat_id)
+
             game.current_player_index = 0
+            current_player = self._current_turn_player(game)
 
         # Game finished.
         if game.state == GameState.INITIAL:
