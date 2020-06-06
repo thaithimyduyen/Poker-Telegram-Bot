@@ -540,26 +540,58 @@ class RoundRateModel:
             game.trading_end_user_id = player.user_id
         return amount
 
+    @staticmethod
+    def _sum_authorized_money(
+        game: Game,
+        players: List[Tuple[Player, Cards]],
+    ) -> int:
+        sum_authorized_money = 0
+        for player in players:
+            sum_authorized_money += player[0].wallet.authorized_money[game.id]
+        return sum_authorized_money
+
     def finish_rate(
         self,
         game: Game,
         player_scores: Dict[Score, List[Tuple[Player, Cards]]],
     ) -> List[Tuple[Player, Cards, Money]]:
-        win_players = player_scores[max(player_scores)]
+        sorted_player_scores_items = sorted(
+            player_scores.items(),
+            reverse=True,
+            key=lambda x: x[0],
+        )
+        player_scores_values = list(
+            map(lambda x: x[1], sorted_player_scores_items))
 
         res = []
-        win_money = game.pot // len(win_players)
-        for win_player, best_hand in win_players:
-            self._wallet_manager.inc(
-                game=game,
-                wallet=win_player.wallet,
-                amount=win_money,
-            )
-            res.append((win_player, best_hand, win_money))
 
-        for players in player_scores.values():
-            for p in players:
-                self._wallet_manager.approve(game, p[0].wallet)
+        for win_players in player_scores_values:
+            players_authorized = self._sum_authorized_money(
+                game=game,
+                players=win_players,
+            )
+            game_pot = game.pot
+            for win_player, best_hand in win_players:
+                if game.pot <= 0:
+                    break
+                authorized = win_player.wallet.authorized_money[game.id]
+
+                win_money_real = game_pot * (authorized / players_authorized)
+                win_money_real = round(win_money_real)
+
+                win_money_can_get = authorized * len(game.players)
+                win_money = min(win_money_real, win_money_can_get)
+
+                self._wallet_manager.inc(
+                    game=game,
+                    wallet=win_player.wallet,
+                    amount=win_money,
+                )
+                game.pot -= win_money
+                res.append((win_player, best_hand, win_money))
+
+        for p in game.players:
+            self._wallet_manager.approve(game, p.wallet)
 
         return res
 

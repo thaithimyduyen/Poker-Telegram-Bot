@@ -28,7 +28,9 @@ class TestRoundRateModel(unittest.TestCase):
         self._wallet_manager.authorize(game, w, autorized)
         self._user_id += 1
         game.pot += autorized
-        return Player(self._user_id, "@test", w)
+        p = Player(self._user_id, "@test", w)
+        game.players.append(p)
+        return p
 
     def assert_authorized_money_zero(self, *players):
         for (i, p) in enumerate(players):
@@ -45,8 +47,8 @@ class TestRoundRateModel(unittest.TestCase):
             0: [with_cards(loser)],
         })
 
-        self.assertEqual(g.pot, winner.wallet.money)
-        self.assertEqual(0, loser.wallet.money)
+        self.assertAlmostEqual(100, winner.wallet.money, places=1)
+        self.assertAlmostEqual(0, loser.wallet.money, places=1)
         self.assert_authorized_money_zero(winner, loser)
 
     def test_finish_rate_two_winners(self):
@@ -60,9 +62,9 @@ class TestRoundRateModel(unittest.TestCase):
             0: [with_cards(loser)],
         })
 
-        self.assertEqual(100, first_winner.wallet.money)
-        self.assertEqual(100, second_winner.wallet.money)
-        self.assertEqual(0, loser.wallet.money)
+        self.assertAlmostEqual(100, first_winner.wallet.money, places=1)
+        self.assertAlmostEqual(100, second_winner.wallet.money, places=1)
+        self.assertAlmostEqual(0, loser.wallet.money, places=1)
         self.assert_authorized_money_zero(first_winner, second_winner, loser)
 
     def test_finish_rate_all_in_one_extra_winner(self):
@@ -79,13 +81,13 @@ class TestRoundRateModel(unittest.TestCase):
         })
 
         # authorized * len(players)
-        self.assertEqual(60, first_winner.wallet.money)
+        self.assertAlmostEqual(60, first_winner.wallet.money, places=1)
         # authorized * len(players)
-        self.assertEqual(20, second_winner.wallet.money)
+        self.assertAlmostEqual(20, second_winner.wallet.money, places=1)
         # pot - winners
-        self.assertEqual(120, extra_winner.wallet.money)
+        self.assertAlmostEqual(120, extra_winner.wallet.money, places=1)
 
-        self.assertEqual(0, loser.wallet.money)
+        self.assertAlmostEqual(0, loser.wallet.money, places=1)
 
         self.assert_authorized_money_zero(
             first_winner, second_winner, extra_winner, loser,
@@ -105,9 +107,9 @@ class TestRoundRateModel(unittest.TestCase):
             ],
         })
 
-        self.assertEqual(50, first_winner.wallet.money)
-        self.assertEqual(100, second_winner.wallet.money)
-        self.assertEqual(150, third_winner.wallet.money)
+        self.assertAlmostEqual(50, first_winner.wallet.money, places=1)
+        self.assertAlmostEqual(100, second_winner.wallet.money, places=1)
+        self.assertAlmostEqual(150, third_winner.wallet.money, places=1)
         self.assert_authorized_money_zero(
             first_winner, second_winner, third_winner,
         )
@@ -126,12 +128,12 @@ class TestRoundRateModel(unittest.TestCase):
             1: [with_cards(fourth_loser)],
         })
 
-        # autorized + losers_money * (autorized / winners_authorized)
-        self.assertEqual(4, first_winner.wallet.money)
-        self.assertEqual(79, second_winner.wallet.money)
+        # pot * (autorized / winners_authorized)
+        self.assertAlmostEqual(4, first_winner.wallet.money, places=1)
+        self.assertAlmostEqual(79, second_winner.wallet.money, places=1)
 
-        self.assertEqual(0, third_loser.wallet.money)
-        self.assertEqual(0, fourth_loser.wallet.money)
+        self.assertAlmostEqual(0, third_loser.wallet.money, places=1)
+        self.assertAlmostEqual(0, fourth_loser.wallet.money, places=1)
 
         self.assert_authorized_money_zero(
             first_winner, second_winner, third_loser, fourth_loser
