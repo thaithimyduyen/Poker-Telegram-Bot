@@ -27,6 +27,7 @@ from app.pokerbotview import PokerBotViewer
 
 KEY_CHAT_DATA_GAME = "game"
 KEY_USER_WALLET = "wallet"
+KEY_OLD_PLAYERS = ""
 
 MAX_PLAYERS = 8
 MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
@@ -107,7 +108,7 @@ class PokerBotModel:
         # One is the bot.
         if players_active == members_count - 1 and \
                 players_active >= MIN_PLAYERS:
-            self._start_game(game=game, chat_id=chat_id)
+            self._start_game(context=context, game=game, chat_id=chat_id)
 
     def start(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
@@ -134,9 +135,26 @@ class PokerBotModel:
             )
             return
 
-        self._start_game(game=game, chat_id=chat_id)
+        self._start_game(context=context, game=game, chat_id=chat_id)
 
-    def _start_game(self, game: Game, chat_id: ChatId) -> None:
+    def _start_game(
+        self,
+        context: CallbackContext,
+        game: Game,
+        chat_id: ChatId
+    ) -> None:
+
+        old_players_ids = context.chat_data.get(KEY_OLD_PLAYERS, [])
+        old_players_ids = old_players_ids[-1:] + old_players_ids[:-1]
+
+        def index(l: List, obj) -> int:
+            try:
+                return l.index(obj)
+            except ValueError:
+                return -1
+
+        game.players.sort(key=lambda p: index(old_players_ids, p.user_id))
+
         game.state = GameState.ROUND_PRE_FLOP
         self._divide_cards(game=game, chat_id=chat_id,)
 
@@ -144,6 +162,10 @@ class PokerBotModel:
         self._round_rate.round_pre_flop_rate_before_first_turn(game)
         self._process_playing(chat_id=chat_id, game=game)
         self._round_rate.round_pre_flop_rate_after_first_turn(game)
+
+        context.chat_data[KEY_OLD_PLAYERS] = list(
+            map(lambda p: p.user_id, game.players),
+        )
 
     def send_cards_to_user(
         self,
