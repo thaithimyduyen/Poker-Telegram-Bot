@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import datetime
 
 from typing import List, Tuple, Dict
 from threading import Lock
@@ -27,12 +28,15 @@ from app.pokerbotview import PokerBotViewer
 
 KEY_CHAT_DATA_GAME = "game"
 KEY_USER_WALLET = "wallet"
-KEY_OLD_PLAYERS = ""
+KEY_OLD_PLAYERS = "old_players"
+KEY_LAST_TIME_ADD_MONEY = "last_time"
+KEY_NOW_TIME_ADD_MONEY = "now_time"
 
 MAX_PLAYERS = 8
 MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 SMALL_BLIND = 5
 MONEY_DAILY = 100
+ONE_DAY = 86400
 
 
 class PokerBotModel:
@@ -173,13 +177,27 @@ class PokerBotModel:
             context.user_data[KEY_USER_WALLET] = Wallet()
 
         wallet = context.user_data[KEY_USER_WALLET]
-        self._wallet_manager.add_daily(wallet)
 
-        money = self._wallet_manager.value(wallet)
+        now_date = datetime.datetime.utcnow().strftime("%d/%m/%Y")
+        last_date = context.user_data.get(KEY_LAST_TIME_ADD_MONEY, "")
+
+        if now_date == last_date:
+            money = self._wallet_manager.value(wallet)
+            self._view.send_message_reply(
+                chat_id=update.effective_message.chat_id,
+                message_id=update.effective_message.message_id,
+                text=f"You have already received bonus today\n" +
+                f"Your money: {money}$"
+            )
+            return
+
+        money = self._wallet_manager.add_daily(wallet)
+        context.user_data[KEY_LAST_TIME_ADD_MONEY] = now_date
+
         self._view.send_message_reply(
             chat_id=update.effective_message.chat_id,
             message_id=update.effective_message.message_id,
-            text=f" Add to your wallet {MONEY_DAILY}$\n" +
+            text=f"Add to your wallet {MONEY_DAILY}$\n" +
             f"Your money: {money}$"
         )
 
@@ -478,10 +496,11 @@ class WalletManagerModel:
     def __init__(self):
         self._lock = Lock()
 
-    def add_daily(self, wallet: Wallet) -> None:
+    def add_daily(self, wallet: Wallet) -> Money:
         self._lock.acquire()
         try:
             wallet.money += MONEY_DAILY
+            return wallet.money
         finally:
             self._lock.release()
 
