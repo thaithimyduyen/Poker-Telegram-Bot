@@ -32,6 +32,7 @@ KEY_OLD_PLAYERS = ""
 MAX_PLAYERS = 8
 MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 SMALL_BLIND = 5
+MONEY_DAILY = 100
 
 
 class PokerBotModel:
@@ -165,6 +166,21 @@ class PokerBotModel:
 
         context.chat_data[KEY_OLD_PLAYERS] = list(
             map(lambda p: p.user_id, game.players),
+        )
+
+    def add_money(self, update: Update, context: CallbackContext) -> None:
+        if KEY_USER_WALLET not in context.user_data:
+            context.user_data[KEY_USER_WALLET] = Wallet()
+
+        wallet = context.user_data[KEY_USER_WALLET]
+        self._wallet_manager.add_daily(wallet)
+
+        money = self._wallet_manager.value(wallet)
+        self._view.send_message_reply(
+            chat_id=update.effective_message.chat_id,
+            message_id=update.effective_message.message_id,
+            text=f" Add to your wallet {MONEY_DAILY}$\n" +
+            f"Your money: {money}$"
         )
 
     def send_cards_to_user(
@@ -461,6 +477,13 @@ class PokerBotModel:
 class WalletManagerModel:
     def __init__(self):
         self._lock = Lock()
+
+    def add_daily(self, wallet: Wallet) -> None:
+        self._lock.acquire()
+        try:
+            wallet.money += MONEY_DAILY
+        finally:
+            self._lock.release()
 
     def inc(self, game: Game, wallet: Wallet, amount: Money = 0) -> None:
         """ Increase count of money in the wallet.
