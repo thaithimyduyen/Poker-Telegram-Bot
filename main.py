@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-from signal import signal, SIGINT
+from signal import signal, SIGINT, SIGTERM
 
 from app.pokerbot import PokerBot
 
@@ -13,11 +13,11 @@ def main() -> None:
         token = f.read()
     bot = PokerBot(token=token)
 
-    def keyboard_interrupt(signal, frame):
+    def gracefull_handler(signal, frame):
         bot.flush()
-        # KeyboardInterrupt sends code 130.
-        sys.exit(130)
-    signal(SIGINT, keyboard_interrupt)
+        sys.exit(0)
+    signal(SIGINT, gracefull_handler)
+    signal(SIGTERM, gracefull_handler)
 
     try:
         bot.run()

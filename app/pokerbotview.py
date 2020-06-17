@@ -7,7 +7,6 @@ from telegram import (
     ReplyKeyboardMarkup,
     Bot,
 )
-from telegram.utils.promise import Promise
 from io import BytesIO
 
 from app.desk import DeskImageGenerator
@@ -28,11 +27,19 @@ class PokerBotViewer:
         self._bot = bot
         self._desk_generator = DeskImageGenerator()
 
-    def send_message(self, chat_id: ChatId, text: str) -> Promise:
-        return self._bot.send_message(
+    def send_message(self, chat_id: ChatId, text: str) -> None:
+        self._bot.send_message(
             chat_id=chat_id,
             parse_mode=ParseMode.MARKDOWN,
             text=text,
+        )
+
+    def send_photo(self, chat_id: ChatId) -> None:
+        # TODO: photo to args.
+        self._bot.send_photo(
+            chat_id=chat_id,
+            photo=open("./assets/poker_hand.jpg", 'rb'),
+            parse_mode=ParseMode.MARKDOWN,
         )
 
     def send_message_reply(
@@ -40,8 +47,8 @@ class PokerBotViewer:
         chat_id: ChatId,
         message_id: MessageId,
         text: str,
-    ) -> Promise:
-        return self._bot.send_message(
+    ) -> None:
+        self._bot.send_message(
             reply_to_message_id=message_id,
             chat_id=chat_id,
             parse_mode=ParseMode.MARKDOWN,
@@ -115,9 +122,9 @@ class PokerBotViewer:
             chat_id: ChatId,
             cards: Cards,
             mention_markdown: Mention,
-    ) -> Promise:
+    ) -> None:
         markup = PokerBotViewer._get_cards_markup(cards)
-        return self._bot.send_message(
+        self._bot.send_message(
             chat_id=chat_id,
             text="Showing cards to " + mention_markdown,
             reply_markup=markup,
@@ -139,7 +146,7 @@ class PokerBotViewer:
             game: Game,
             player: Player,
             money: Money,
-    ) -> Promise:
+    ) -> None:
         if len(game.cards_table) == 0:
             cards_table = "no cards"
         else:
@@ -160,7 +167,7 @@ class PokerBotViewer:
             game, player
         )
         markup = PokerBotViewer._get_turns_markup(check_call_action)
-        return self._bot.send_message(
+        self._bot.send_message(
             chat_id=chat_id,
             text=text,
             reply_markup=markup,
@@ -171,8 +178,8 @@ class PokerBotViewer:
         self,
         chat_id: ChatId,
         message_id: MessageId,
-    ) -> Promise:
-        return self._bot.edit_message_reply_markup(
+    ) -> None:
+        self._bot.edit_message_reply_markup(
             chat_id=chat_id,
             message_id=message_id,
         )

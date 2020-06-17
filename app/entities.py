@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import enum
+import datetime
 from typing import Tuple, List
 from uuid import uuid4
 from collections import defaultdict
@@ -64,6 +65,7 @@ class Game:
         self.remain_cards = get_cards()
         self.trading_end_user_id = 0
         self.ready_users = set()
+        self.last_turn_time = datetime.datetime.now()
 
     def players_by(self, states: Tuple[PlayerState]) -> List[Player]:
         return list(filter(lambda p: p.state in states, self.players))

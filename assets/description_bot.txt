@@ -1,0 +1,28 @@
+Welcome to Bot - "Texas Poker"
+At first, add Bot to your telegram group.
+Then every member of the group should send command /ready to start the new game.
+Enjoy the time with Bot!
+
+*Here is the brief instruction of Texas Poker*:
+Every player has two private cards and on the table has five community cards which are dealt face up in the three stages.
+On the beginning of game, two people which are selected for big and small blinds. This means the blinds are forced to bet, the small blind bet 5$ and the big blind bet 10$.
+when cards are divied to every member, the stages will be started.
+
+There are 4 stages in every game:
+- The pre-flop: There is no card on the table
+- The flop: Add three cards on the table
+- The turn: Add to table one card 
+- The river: Add to table the last card
+
+In every stage, every member will be betting with actions:
+- bet: putting into the pot the chips
+- call: putting into the pot the same number of chips
+- check: skipping your turn and putting no chips into pot
+- raise: putting into the pot more than enough chips to call 
+- all-in: putting into the pot all chips that you have
+- fold: putting no chips into the pot and is out of the game.
+A betting interval ends when the bets have been equalized and the new stage will be started.
+
+The game can end any time if there is only one players in the game and of course when the winner is defined.
+After four stages, every member will be show their best hand (five cards from seven cards) to determinate the winner.
+The winner is determinated by various combinations of Poker hands rank from five of a kind (the highest) to no pair or nothing (the lowest) 

@@ -37,6 +37,8 @@ MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 SMALL_BLIND = 5
 MONEY_DAILY = 100
 ONE_DAY = 86400
+MAX_TIME_FOR_TURN = datetime.timedelta(minutes=2)
+DESCRIPTION_FILE = "assets/description_bot.txt"
 
 
 class PokerBotModel:
@@ -101,7 +103,7 @@ class PokerBotModel:
             return self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=update.effective_message.message_id,
-                text="You have enough money",
+                text="You don't have enough money",
             )
 
         game.ready_users.add(user.id)
@@ -117,30 +119,30 @@ class PokerBotModel:
 
     def start(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
-
         chat_id = update.effective_message.chat_id
-        message_id = update.effective_message.message_id
-        has_access = self._check_access(
-            chat_id=chat_id,
-            user_id=update.effective_message.from_user.id,
-        )
-        if not has_access:
-            self._view.send_message_reply(
+        # One is the bot.
+        members_count = self._bot.get_chat_members_count(chat_id) - 1
+        if members_count == 1:
+            with open(DESCRIPTION_FILE, 'r') as f:
+                text = f.read()
+
+            chat_id = update.effective_message.chat_id
+            self._view.send_message(
                 chat_id=chat_id,
-                text="👾 *Denied!* 👾",
-                message_id=message_id,
+                text=text
             )
+            self._view.send_photo(chat_id=chat_id)
             return
 
-        if len(game.players) < MIN_PLAYERS:
-            self._view.send_message_reply(
+        players_active = len(game.players)
+        if players_active >= MIN_PLAYERS:
+            self._start_game(context=context, game=game, chat_id=chat_id)
+        else:
+            self._view.send_message(
                 chat_id=chat_id,
-                text="Not enough players",
-                message_id=message_id,
+                text="Not enough player"
             )
-            return
-
-        self._start_game(context=context, game=game, chat_id=chat_id)
+        return
 
     def _start_game(
         self,
@@ -282,6 +284,7 @@ class PokerBotModel:
             self._finish(game, chat_id)
             return
 
+        game.last_turn_time = datetime.datetime.now()
         self._view.send_turn_actions(
             chat_id=chat_id,
             game=game,
@@ -405,6 +408,27 @@ class PokerBotModel:
             )
 
         return m
+
+    def ban_player(self, update: Update, context: CallbackContext) -> None:
+        game = self._game_from_context(context)
+        chat_id = update.effective_message.chat_id
+
+        if game.state in (GameState.INITIAL, GameState.FINISHED):
+            return
+
+        diff = datetime.datetime.now() - game.last_turn_time
+        if diff < MAX_TIME_FOR_TURN:
+            self._view.send_message(
+                chat_id=chat_id,
+                text="You can't ban. Max turn time is 2 minutes"
+            )
+            return
+
+        self._view.send_message(
+            chat_id=chat_id,
+            text="Time is over!"
+        )
+        self.fold(update, context)
 
     def fold(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)

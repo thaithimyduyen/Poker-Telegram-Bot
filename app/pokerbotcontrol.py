@@ -26,6 +26,9 @@ class PokerBotCotroller:
             CommandHandler('money', self._handle_money)
         )
         updater.dispatcher.add_handler(
+            CommandHandler('ban', self._handle_ban)
+        )
+        updater.dispatcher.add_handler(
             CommandHandler('cards', self._handle_cards)
         )
         updater.dispatcher.add_handler(
@@ -44,6 +47,9 @@ class PokerBotCotroller:
 
     def _handle_cards(self, update: Update, context: CallbackContext) -> None:
         self._model.send_cards_to_user(update, context)
+
+    def _handle_ban(self, update: Update, context: CallbackContext) -> None:
+        self._model.ban_player(update, context)
 
     def _handle_check(self, update: Update, context: CallbackContext) -> None:
         self._model.check(update, context)
