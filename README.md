@@ -38,7 +38,6 @@ The winner is determinated by various combinations of Poker hands rank from five
 ![chat example](https://raw.githubusercontent.com/thaithimyduyen/Poker-Telegram-Bot/master/assets/poker_hand.jpg "Chat example")
 
 **Telegram chat example**\
-![chat example](https://raw.githubusercontent.com/thaithimyduyen/Poker-Telegram-Bot/master/assets/example.jpg "Chat example")\
 ![chat example](https://raw.githubusercontent.com/thaithimyduyen/Poker-Telegram-Bot/master/assets/chatexample.png "Chat example")
 
 ### How to use ?
