@@ -36,10 +36,9 @@ class PokerBot:
     def __init__(
         self,
         token: str,
-        proxy_url: str = "socks5://127.0.0.1:9050",
         state_file: str = "./state.dat"
     ):
-        req = Request(proxy_url=proxy_url, con_pool_size=8)
+        req = Request(con_pool_size=8)
         bot = MessageDelayBot(token=token, request=req)
         bot.run_tasks_manager()
 
@@ -59,6 +58,7 @@ class PokerBot:
         self._model = PokerBotModel(
             view=self._view,
             bot=bot,
+            persistence=self._persistence,
         )
         self._controller = PokerBotCotroller(self._model, self._updater)
 

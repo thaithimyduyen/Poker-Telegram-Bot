@@ -6,7 +6,7 @@ import datetime
 from typing import List, Tuple, Dict
 from threading import Lock
 from telegram import Update, Bot
-from telegram.ext import Handler, CallbackContext
+from telegram.ext import Handler, CallbackContext, BasePersistence
 
 from app.winnerdetermination import WinnerDetermination
 from app.cards import Cards
@@ -42,12 +42,19 @@ DESCRIPTION_FILE = "assets/description_bot.txt"
 
 
 class PokerBotModel:
-    def __init__(self, view: PokerBotViewer, bot: Bot):
-        self._view = view
-        self._bot = bot
-        self._wallet_manager = WalletManagerModel()
-        self._round_rate = RoundRateModel(self._wallet_manager)
-        self._winner_determine = WinnerDetermination()
+    def __init__(
+        self,
+        view: PokerBotViewer,
+        bot: Bot,
+        persistence: BasePersistence,
+    ):
+        self._view: PokerBotViewer = view
+        self._bot: Bot = bot
+        self._winner_determine: WinnerDetermination = WinnerDetermination()
+        self._wallet_manager: WalletManagerModel = WalletManagerModel(
+            persistence,
+        )
+        self._round_rate: RoundRateModel = RoundRateModel(self._wallet_manager)
 
     @staticmethod
     def _game_from_context(context: CallbackContext) -> Game:
@@ -517,23 +524,25 @@ class PokerBotModel:
 
 
 class WalletManagerModel:
-    def __init__(self):
-        self._lock = Lock()
+    def __init__(self, persistence: BasePersistence):
+        self.__lock = Lock()
+        self.__persistence: BasePersistence = persistence
 
     def add_daily(self, wallet: Wallet) -> Money:
-        self._lock.acquire()
+        self.__lock.acquire()
         try:
             wallet.money += MONEY_DAILY
             return wallet.money
         finally:
-            self._lock.release()
+            self.__persistence.flush()
+            self.__lock.release()
 
     def inc(self, game: Game, wallet: Wallet, amount: Money = 0) -> None:
         """ Increase count of money in the wallet.
             Decrease authorized money.
         """
 
-        self._lock.acquire()
+        self.__lock.acquire()
         try:
             if wallet.money + amount < 0:
                 raise UserException("not enough money")
@@ -543,16 +552,18 @@ class WalletManagerModel:
             authorized = wallet.authorized_money[game.id] - amount
             wallet.authorized_money[game.id] = max(0, authorized)
         finally:
-            self._lock.release()
+            self.__persistence.flush()
+            self.__lock.release()
 
     def approve(self, game: Game, wallet: Wallet) -> None:
         """ Approve authorized money. """
 
-        self._lock.acquire()
+        self.__lock.acquire()
         try:
             wallet.authorized_money[game.id] = 0
         finally:
-            self._lock.release()
+            self.__persistence.flush()
+            self.__lock.release()
 
     def authorize(self, game: Game, wallet: Wallet, amount: Money) -> None:
         """ Decrease count of money. """
@@ -561,23 +572,24 @@ class WalletManagerModel:
 
     def authorize_all(self, game: Game, wallet: Wallet) -> Money:
         """ Decrease all money of player. """
-        self._lock.acquire()
+        self.__lock.acquire()
         try:
             money = wallet.money
             wallet.authorized_money[game.id] += money
             wallet.money = 0
             return money
         finally:
-            self._lock.release()
+            self.__persistence.flush()
+            self.__lock.release()
 
     def value(self, wallet: Wallet) -> Money:
         """ Get count of money in the wallet. """
 
-        self._lock.acquire()
+        self.__lock.acquire()
         try:
             return wallet.money
         finally:
-            self._lock.release()
+            self.__lock.release()
 
 
 class RoundRateModel:
