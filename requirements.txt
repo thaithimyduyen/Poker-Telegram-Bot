@@ -2,3 +2,4 @@ python-telegram-bot
 flake8
 pillow
 PySocks
+redis

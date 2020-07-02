@@ -176,26 +176,18 @@ class PokerBotModel:
         )
 
     def add_money(self, update: Update, context: CallbackContext) -> None:
-        now_date = datetime.datetime.utcnow().strftime("%d/%m/%Y")
-        last_date = context.user_data.get(KEY_LAST_TIME_ADD_MONEY, "")
-
         user_id = update.effective_message.from_user.id
-        wallet = WalletManagerModel(user_id, self._kv)
-        if now_date == last_date:
-            money = wallet.value()
-            self._view.send_message_reply(
-                chat_id=update.effective_message.chat_id,
-                message_id=update.effective_message.message_id,
-                text=f"You have already received bonus today\n" +
-                f"Your money: {money}$"
-            )
+        chat_id = update.effective_message.chat_id
+        try:
+            money = WalletManagerModel(user_id, self._kv).add_daily()
+        except UserException as e:
+            print(e)
+            self._view.send_message(
+                chat_id=chat_id,
+                text=str(e))
             return
-
-        money = wallet.add_daily()
-        context.user_data[KEY_LAST_TIME_ADD_MONEY] = now_date
-
         self._view.send_message_reply(
-            chat_id=update.effective_message.chat_id,
+            chat_id=chat_id,
             message_id=update.effective_message.message_id,
             text=f"Add to your wallet {MONEY_DAILY}$\n" +
             f"Your money: {money}$"
@@ -513,21 +505,32 @@ class PokerBotModel:
 
 
 class WalletManagerModel:
-
-    @staticmethod
-    def _prefix(id: int):
-        return "pokerbot:" + str(id)
-
     def __init__(self, user_id: UserId, kv: redis.Redis):
         self.user_id = user_id
         self._kv = kv
         self.authorized_money = 0
 
-        if self._kv.get(self._prefix(self.user_id)) is None:
-            self._kv.set(self._prefix(self.user_id), DEFAULT_MONEY)
+        key = self._prefix(self.user_id)
+        if self._kv.get(key) is None:
+            self._kv.set(key, DEFAULT_MONEY)
+
+    @staticmethod
+    def _prefix(id: int, suffix: str = ""):
+        return "pokerbot:" + str(id) + suffix
 
     def add_daily(self) -> Money:
-        return self._kv.incrby(self._prefix(self.user_id), MONEY_DAILY)
+        key = self._prefix(self.user_id)
+        key_daily = self._prefix(self.user_id, ":daily")
+
+        current_date = datetime.datetime.utcnow().strftime("%d/%m/%y")
+        last_date = self._kv.get(key_daily).decode("utf-8")
+
+        if last_date == current_date:
+            raise UserException("You have already received the bonus today")
+
+        self._kv.set(key_daily, current_date)
+
+        return self._kv.incrby(key, MONEY_DAILY)
 
     def inc(self, game: Game, amount: Money = 0) -> None:
         """ Increase count of money in the wallet.
