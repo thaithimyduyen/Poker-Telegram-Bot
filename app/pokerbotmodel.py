@@ -2,11 +2,11 @@
 
 import os
 import datetime
+import redis
 
 from typing import List, Tuple, Dict
-from threading import Lock
 from telegram import Update, Bot
-from telegram.ext import Handler, CallbackContext, BasePersistence
+from telegram.ext import Handler, CallbackContext
 
 from app.winnerdetermination import WinnerDetermination
 from app.cards import Cards
@@ -18,7 +18,6 @@ from app.entities import (
     UserId,
     UserException,
     Money,
-    Wallet,
     PlayerAction,
     PlayerState,
     Score,
@@ -27,7 +26,6 @@ from app.pokerbotview import PokerBotViewer
 
 
 KEY_CHAT_DATA_GAME = "game"
-KEY_USER_WALLET = "wallet"
 KEY_OLD_PLAYERS = "old_players"
 KEY_LAST_TIME_ADD_MONEY = "last_time"
 KEY_NOW_TIME_ADD_MONEY = "now_time"
@@ -37,6 +35,7 @@ MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
 SMALL_BLIND = 5
 MONEY_DAILY = 100
 ONE_DAY = 86400
+DEFAULT_MONEY = 1000
 MAX_TIME_FOR_TURN = datetime.timedelta(minutes=2)
 DESCRIPTION_FILE = "assets/description_bot.txt"
 
@@ -46,15 +45,13 @@ class PokerBotModel:
         self,
         view: PokerBotViewer,
         bot: Bot,
-        persistence: BasePersistence,
+        kv,
     ):
         self._view: PokerBotViewer = view
         self._bot: Bot = bot
         self._winner_determine: WinnerDetermination = WinnerDetermination()
-        self._wallet_manager: WalletManagerModel = WalletManagerModel(
-            persistence,
-        )
-        self._round_rate: RoundRateModel = RoundRateModel(self._wallet_manager)
+        self._round_rate: RoundRateModel = RoundRateModel()
+        self._kv = kv
 
     @staticmethod
     def _game_from_context(context: CallbackContext) -> Game:
@@ -97,16 +94,13 @@ class PokerBotModel:
             )
             return
 
-        if KEY_USER_WALLET not in context.user_data:
-            context.user_data[KEY_USER_WALLET] = Wallet()
-
         player = Player(
             user_id=user.id,
             mention_markdown=user.mention_markdown(),
-            wallet=context.user_data[KEY_USER_WALLET],
+            wallet=WalletManagerModel(user.id, self._kv)
         )
 
-        if self._wallet_manager.value(player.wallet) < 2*SMALL_BLIND:
+        if player.wallet.value() < 2*SMALL_BLIND:
             return self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=update.effective_message.message_id,
@@ -182,16 +176,13 @@ class PokerBotModel:
         )
 
     def add_money(self, update: Update, context: CallbackContext) -> None:
-        if KEY_USER_WALLET not in context.user_data:
-            context.user_data[KEY_USER_WALLET] = Wallet()
-
-        wallet = context.user_data[KEY_USER_WALLET]
-
         now_date = datetime.datetime.utcnow().strftime("%d/%m/%Y")
         last_date = context.user_data.get(KEY_LAST_TIME_ADD_MONEY, "")
 
+        user_id = update.effective_message.from_user.id
+        wallet = WalletManagerModel(user_id, self._kv)
         if now_date == last_date:
-            money = self._wallet_manager.value(wallet)
+            money = wallet.value()
             self._view.send_message_reply(
                 chat_id=update.effective_message.chat_id,
                 message_id=update.effective_message.message_id,
@@ -200,7 +191,7 @@ class PokerBotModel:
             )
             return
 
-        money = self._wallet_manager.add_daily(wallet)
+        money = wallet.add_daily()
         context.user_data[KEY_LAST_TIME_ADD_MONEY] = now_date
 
         self._view.send_message_reply(
@@ -270,9 +261,7 @@ class PokerBotModel:
         # Player could be changed.
         current_player = self._current_turn_player(game)
 
-        current_player_money = self._wallet_manager.value(
-            current_player.wallet,
-        )
+        current_player_money = current_player.wallet.value()
 
         # Player do not have monery so make it ALL_IN.
         if current_player_money <= 0:
@@ -524,77 +513,51 @@ class PokerBotModel:
 
 
 class WalletManagerModel:
-    def __init__(self, persistence: BasePersistence):
-        self.__lock = Lock()
-        self.__persistence: BasePersistence = persistence
 
-    def add_daily(self, wallet: Wallet) -> Money:
-        self.__lock.acquire()
-        try:
-            wallet.money += MONEY_DAILY
-            return wallet.money
-        finally:
-            self.__persistence.flush()
-            self.__lock.release()
+    @staticmethod
+    def _prefix(id: int):
+        return "pokerbot:" + str(id)
 
-    def inc(self, game: Game, wallet: Wallet, amount: Money = 0) -> None:
+    def __init__(self, user_id: UserId, kv: redis.Redis):
+        self.user_id = user_id
+        self._kv = kv
+        self.authorized_money = 0
+
+        if self._kv.get(self._prefix(self.user_id)) is None:
+            self._kv.set(self._prefix(self.user_id), DEFAULT_MONEY)
+
+    def add_daily(self) -> Money:
+        return self._kv.incrby(self._prefix(self.user_id), MONEY_DAILY)
+
+    def inc(self, game: Game, amount: Money = 0) -> None:
         """ Increase count of money in the wallet.
             Decrease authorized money.
         """
+        wallet = int(self._kv.get(self._prefix(self.user_id)))
 
-        self.__lock.acquire()
-        try:
-            if wallet.money + amount < 0:
-                raise UserException("not enough money")
+        if wallet + amount < 0:
+            raise UserException("not enough money")
 
-            wallet.money += amount
+        self._kv.incrby(self._prefix(self.user_id), amount)
 
-            authorized = wallet.authorized_money[game.id] - amount
-            wallet.authorized_money[game.id] = max(0, authorized)
-        finally:
-            self.__persistence.flush()
-            self.__lock.release()
-
-    def approve(self, game: Game, wallet: Wallet) -> None:
-        """ Approve authorized money. """
-
-        self.__lock.acquire()
-        try:
-            wallet.authorized_money[game.id] = 0
-        finally:
-            self.__persistence.flush()
-            self.__lock.release()
-
-    def authorize(self, game: Game, wallet: Wallet, amount: Money) -> None:
+    def authorize(self, game: Game, amount: Money) -> None:
         """ Decrease count of money. """
+        self.authorized_money += amount
+        return self.inc(game, -amount)
 
-        return self.inc(game, wallet, -amount)
-
-    def authorize_all(self, game: Game, wallet: Wallet) -> Money:
+    def authorize_all(self, game: Game) -> Money:
         """ Decrease all money of player. """
-        self.__lock.acquire()
-        try:
-            money = wallet.money
-            wallet.authorized_money[game.id] += money
-            wallet.money = 0
-            return money
-        finally:
-            self.__persistence.flush()
-            self.__lock.release()
+        money = int(self._kv.get(self._prefix(self.user_id)))
+        self.authorized_money += money
+        self._kv.set(self._prefix(self.user_id), 0)
+        return money
 
-    def value(self, wallet: Wallet) -> Money:
+    def value(self) -> Money:
         """ Get count of money in the wallet. """
-
-        self.__lock.acquire()
-        try:
-            return wallet.money
-        finally:
-            self.__lock.release()
+        return int(self._kv.get(self._prefix(self.user_id)))
 
 
 class RoundRateModel:
-    def __init__(self, wallet_manager: WalletManagerModel):
-        self._wallet_manager = wallet_manager
 
     def round_pre_flop_rate_before_first_turn(self, game: Game) -> None:
         self.raise_rate_bet(game, game.players[0], SMALL_BLIND)
@@ -607,9 +570,8 @@ class RoundRateModel:
     def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
         amount += game.max_round_rate - player.round_rate
 
-        self._wallet_manager.authorize(
+        player.wallet.authorize(
             game=game,
-            wallet=player.wallet,
             amount=amount,
         )
         player.round_rate += amount
@@ -620,17 +582,15 @@ class RoundRateModel:
     def call_check(self, game, player) -> None:
         amount = game.max_round_rate - player.round_rate
 
-        self._wallet_manager.authorize(
+        player.wallet.authorize(
             game=game,
-            wallet=player.wallet,
             amount=amount,
         )
         player.round_rate += amount
 
     def all_in(self, game, player) -> Money:
-        amount = self._wallet_manager.authorize_all(
+        amount = player.wallet.authorize_all(
             game=game,
-            wallet=player.wallet,
         )
         player.round_rate += amount
         if game.max_round_rate < player.round_rate:
@@ -645,7 +605,7 @@ class RoundRateModel:
     ) -> int:
         sum_authorized_money = 0
         for player in players:
-            sum_authorized_money += player[0].wallet.authorized_money[game.id]
+            sum_authorized_money += player[0].wallet.authorized_money
         return sum_authorized_money
 
     def finish_rate(
@@ -675,7 +635,7 @@ class RoundRateModel:
                 if game.pot <= 0:
                     break
 
-                authorized = win_player.wallet.authorized_money[game.id]
+                authorized = win_player.wallet.authorized_money
 
                 win_money_real = game_pot * (authorized / players_authorized)
                 win_money_real = round(win_money_real)
@@ -683,16 +643,12 @@ class RoundRateModel:
                 win_money_can_get = authorized * len(game.players)
                 win_money = min(win_money_real, win_money_can_get)
 
-                self._wallet_manager.inc(
+                win_player.wallet.inc(
                     game=game,
-                    wallet=win_player.wallet,
                     amount=win_money,
                 )
                 game.pot -= win_money
                 res.append((win_player, best_hand, win_money))
-
-        for p in game.players:
-            self._wallet_manager.approve(game, p.wallet)
 
         return res
 

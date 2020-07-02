@@ -4,10 +4,8 @@ import enum
 import datetime
 from typing import Tuple, List
 from uuid import uuid4
-from collections import defaultdict
 from app.cards import get_cards
 
-DEFAULT_MONEY = 1000
 
 MessageId = str
 ChatId = str
@@ -17,21 +15,12 @@ Score = int
 Money = int
 
 
-class Wallet:
-    def __init__(self):
-        self.money = Money(DEFAULT_MONEY)
-        self.authorized_money = defaultdict(int)
-
-    def __repr__(self):
-        return "{}({!r})".format(self.__class__.__name__, self.__dict__)
-
-
 class Player:
     def __init__(
         self,
         user_id: UserId,
         mention_markdown: Mention,
-        wallet: Wallet,
+        wallet,
     ):
         self.user_id = user_id
         self.mention_markdown = mention_markdown

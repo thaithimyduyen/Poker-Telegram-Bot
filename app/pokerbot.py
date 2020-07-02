@@ -3,11 +3,12 @@
 import logging
 import threading
 import time
-from typing import Callable
+import redis
 
+from typing import Callable
 from telegram import Bot
 from telegram.utils.request import Request
-from telegram.ext import Updater, PicklePersistence
+from telegram.ext import Updater
 from telegram.error import (
     TimedOut,
     NetworkError,
@@ -25,6 +26,9 @@ from app.pokerbotmodel import PokerBotModel
 from app.pokerbotview import PokerBotViewer
 from app.entities import ChatId
 
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
+REDIS_DB = 0
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -42,28 +46,24 @@ class PokerBot:
         bot = MessageDelayBot(token=token, request=req)
         bot.run_tasks_manager()
 
-        self._persistence = PicklePersistence(
-            state_file,
-            store_bot_data=False,
-            store_chat_data=False,
-            store_user_data=True,
-        )
         self._updater = Updater(
             bot=bot,
             use_context=True,
-            persistence=self._persistence,
+        )
+
+        kv = redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB,
         )
 
         self._view = PokerBotViewer(bot=bot)
         self._model = PokerBotModel(
             view=self._view,
             bot=bot,
-            persistence=self._persistence,
+            kv=kv,
         )
         self._controller = PokerBotCotroller(self._model, self._updater)
-
-    def flush(self) -> None:
-        self._persistence.flush()
 
     def run(self) -> None:
         self._updater.start_polling()
