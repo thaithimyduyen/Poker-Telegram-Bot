@@ -523,9 +523,9 @@ class WalletManagerModel:
         key_daily = self._prefix(self.user_id, ":daily")
 
         current_date = datetime.datetime.utcnow().strftime("%d/%m/%y")
-        last_date = self._kv.get(key_daily).decode("utf-8")
+        last_date = self._kv.get(key_daily)
 
-        if last_date == current_date:
+        if last_date is not None and last_date.decode("utf-8") == current_date:
             raise UserException("You have already received the bonus today")
 
         self._kv.set(key_daily, current_date)
