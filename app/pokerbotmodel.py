@@ -50,8 +50,8 @@ class PokerBotModel:
         self._view: PokerBotViewer = view
         self._bot: Bot = bot
         self._winner_determine: WinnerDetermination = WinnerDetermination()
-        self._round_rate: RoundRateModel = RoundRateModel()
         self._kv = kv
+        self._round_rate: RoundRateModel = RoundRateModel()
 
     @staticmethod
     def _game_from_context(context: CallbackContext) -> Game:
@@ -332,6 +332,9 @@ class PokerBotModel:
         text += "/ready to continue"
         self._view.send_message(chat_id=chat_id, text=text)
 
+        for player in game.players:
+            player.wallet.approve(player.user_id, game.id)
+
         game.reset()
 
     def _goto_next_round(self, game: Game, chat_id: ChatId) -> bool:
@@ -494,11 +497,11 @@ class PokerBotModel:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
         player = self._current_turn_player(game)
+        mention = player.mention_markdown
         amount = self._round_rate.all_in(game, player)
         self._view.send_message(
             chat_id=chat_id,
-            text=player.mention_markdown +
-            f"{PlayerAction.ALL_IN.value} {amount}$"
+            text=f"{mention} {PlayerAction.ALL_IN.value} {amount}$"
         )
         player.state = PlayerState.ALL_IN
         self._process_playing(chat_id=chat_id, game=game)
@@ -508,7 +511,6 @@ class WalletManagerModel:
     def __init__(self, user_id: UserId, kv: redis.Redis):
         self.user_id = user_id
         self._kv = kv
-        self.authorized_money = 0
 
         key = self._prefix(self.user_id)
         if self._kv.get(key) is None:
@@ -532,7 +534,7 @@ class WalletManagerModel:
 
         return self._kv.incrby(key, MONEY_DAILY)
 
-    def inc(self, game: Game, amount: Money = 0) -> None:
+    def inc(self, amount: Money = 0) -> None:
         """ Increase count of money in the wallet.
             Decrease authorized money.
         """
@@ -543,21 +545,40 @@ class WalletManagerModel:
 
         self._kv.incrby(self._prefix(self.user_id), amount)
 
-    def authorize(self, game: Game, amount: Money) -> None:
-        """ Decrease count of money. """
-        self.authorized_money += amount
-        return self.inc(game, -amount)
+    def inc_authorized_money(
+        self,
+        user_id: UserId,
+        game_id: str,
+        amount: Money
+    ) -> None:
+        key_authorized_money = self._prefix(user_id, ":" + game_id)
+        self._kv.incrby(key_authorized_money, amount)
 
-    def authorize_all(self, game: Game) -> Money:
+    def authorized_money(self, user_id: UserId, game_id: str) -> Money:
+        key_authorized_money = self._prefix(user_id, ":" + game_id)
+        return int(self._kv.get(key_authorized_money))
+
+    def authorize(self, game_id: str, amount: Money) -> None:
+        """ Decrease count of money. """
+        self.inc_authorized_money(self.user_id, game_id, amount)
+
+        return self.inc(-amount)
+
+    def authorize_all(self, game_id: str) -> Money:
         """ Decrease all money of player. """
         money = int(self._kv.get(self._prefix(self.user_id)))
-        self.authorized_money += money
+        self.inc_authorized_money(self.user_id, game_id, money)
+
         self._kv.set(self._prefix(self.user_id), 0)
         return money
 
     def value(self) -> Money:
         """ Get count of money in the wallet. """
         return int(self._kv.get(self._prefix(self.user_id)))
+
+    def approve(self, user_id: UserId, game_id: str) -> None:
+        key_authorized_money = self._prefix(user_id, ":" + game_id)
+        self._kv.delete(key_authorized_money)
 
 
 class RoundRateModel:
@@ -574,7 +595,7 @@ class RoundRateModel:
         amount += game.max_round_rate - player.round_rate
 
         player.wallet.authorize(
-            game=game,
+            game_id=game.id,
             amount=amount,
         )
         player.round_rate += amount
@@ -586,14 +607,14 @@ class RoundRateModel:
         amount = game.max_round_rate - player.round_rate
 
         player.wallet.authorize(
-            game=game,
+            game_id=game.id,
             amount=amount,
         )
         player.round_rate += amount
 
     def all_in(self, game, player) -> Money:
         amount = player.wallet.authorize_all(
-            game=game,
+            game_id=game.id,
         )
         player.round_rate += amount
         if game.max_round_rate < player.round_rate:
@@ -608,7 +629,11 @@ class RoundRateModel:
     ) -> int:
         sum_authorized_money = 0
         for player in players:
-            sum_authorized_money += player[0].wallet.authorized_money
+            user_id = player[0].user_id
+            sum_authorized_money += player[0].wallet.authorized_money(
+                user_id=user_id,
+                game_id=game.id,
+            )
         return sum_authorized_money
 
     def finish_rate(
@@ -638,7 +663,10 @@ class RoundRateModel:
                 if game.pot <= 0:
                     break
 
-                authorized = win_player.wallet.authorized_money
+                authorized = win_player.wallet.authorized_money(
+                    user_id=win_player.user_id,
+                    game_id=game.id,
+                )
 
                 win_money_real = game_pot * (authorized / players_authorized)
                 win_money_real = round(win_money_real)
@@ -646,10 +674,7 @@ class RoundRateModel:
                 win_money_can_get = authorized * len(game.players)
                 win_money = min(win_money_real, win_money_can_get)
 
-                win_player.wallet.inc(
-                    game=game,
-                    amount=win_money,
-                )
+                win_player.wallet.inc(win_money)
                 game.pot -= win_money
                 res.append((win_player, best_hand, win_money))
 
