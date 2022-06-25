@@ -21,10 +21,10 @@ from telegram.error import (
     Unauthorized,
 )
 
-from app.pokerbotcontrol import PokerBotCotroller
-from app.pokerbotmodel import PokerBotModel
-from app.pokerbotview import PokerBotViewer
-from app.entities import ChatId
+from pokerapp.pokerbotcontrol import PokerBotCotroller
+from pokerapp.pokerbotmodel import PokerBotModel
+from pokerapp.pokerbotview import PokerBotViewer
+from pokerapp.entities import ChatId
 
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379

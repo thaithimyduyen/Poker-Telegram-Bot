@@ -4,8 +4,8 @@ import unittest
 
 from typing import Tuple
 
-from app.cards import Cards, Card
-from app.winnerdetermination import WinnerDetermination
+from pokerapp.cards import Cards, Card
+from pokerapp.winnerdetermination import WinnerDetermination
 
 
 HANDS_FILE = "./tests/hands.txt"

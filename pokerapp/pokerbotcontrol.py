@@ -8,8 +8,8 @@ from telegram.ext import (
     Updater,
 )
 
-from app.entities import PlayerAction
-from app.pokerbotmodel import PokerBotModel
+from pokerapp.entities import PlayerAction
+from pokerapp.pokerbotmodel import PokerBotModel
 
 
 class PokerBotCotroller:

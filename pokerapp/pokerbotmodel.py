@@ -8,9 +8,9 @@ from typing import List, Tuple, Dict
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
 
-from app.winnerdetermination import WinnerDetermination
-from app.cards import Cards
-from app.entities import (
+from pokerapp.winnerdetermination import WinnerDetermination
+from pokerapp.cards import Cards
+from pokerapp.entities import (
     Game,
     GameState,
     Player,
@@ -22,7 +22,7 @@ from app.entities import (
     PlayerState,
     Score,
 )
-from app.pokerbotview import PokerBotViewer
+from pokerapp.pokerbotview import PokerBotViewer
 
 
 KEY_CHAT_DATA_GAME = "game"

@@ -9,9 +9,9 @@ from telegram import (
 )
 from io import BytesIO
 
-from app.desk import DeskImageGenerator
-from app.cards import Cards
-from app.entities import (
+from pokerapp.desk import DeskImageGenerator
+from pokerapp.cards import Cards
+from pokerapp.entities import (
     Game,
     Player,
     PlayerAction,

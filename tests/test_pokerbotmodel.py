@@ -3,9 +3,9 @@
 import unittest
 from typing import Tuple
 
-from app.cards import Cards, Card
-from app.entities import Money, Player, Game, Wallet
-from app.pokerbotmodel import RoundRateModel, WalletManagerModel
+from pokerapp.cards import Cards, Card
+from pokerapp.entities import Money, Player, Game, Wallet
+from pokerapp.pokerbotmodel import RoundRateModel, WalletManagerModel
 
 
 HANDS_FILE = "./tests/hands.txt"

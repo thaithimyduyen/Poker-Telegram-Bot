@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from app.pokerbot import PokerBot
+from pokerapp.pokerbot import PokerBot
 
 TOKEN_FILE = "./token.txt"
 

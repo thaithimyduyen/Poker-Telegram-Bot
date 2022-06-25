@@ -4,7 +4,7 @@
 from PIL import Image
 from pathlib import Path
 
-from app.cards import Cards, Card
+from pokerapp.cards import Cards, Card
 
 
 class DeskImageGenerator:

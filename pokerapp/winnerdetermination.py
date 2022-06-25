@@ -4,8 +4,8 @@ import enum
 from itertools import combinations
 from typing import Dict, List, Tuple
 
-from app.cards import Card, Cards
-from app.entities import Player, Score
+from pokerapp.cards import Card, Cards
+from pokerapp.entities import Player, Score
 
 HAND_RANK = 15**5
 

@@ -4,7 +4,7 @@ import enum
 import datetime
 from typing import Tuple, List
 from uuid import uuid4
-from app.cards import get_cards
+from pokerapp.cards import get_cards
 
 
 MessageId = str
