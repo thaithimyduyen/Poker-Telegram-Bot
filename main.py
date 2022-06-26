@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
+import os
 from pokerapp.pokerbot import PokerBot
 
-TOKEN_FILE = "./token.txt"
+TOKEN = os.getEnv("POKER_TELEGRAM_BOT_TOKEN")
 
 
 def main() -> None:
-    with open(TOKEN_FILE, 'r') as f:
-        token = f.read()
-    bot = PokerBot(token=token)
+    bot = PokerBot(token=TOKEN)
     bot.run()
 
 

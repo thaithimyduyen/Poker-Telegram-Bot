@@ -155,9 +155,9 @@ class PokerBotModel:
         old_players_ids = context.chat_data.get(KEY_OLD_PLAYERS, [])
         old_players_ids = old_players_ids[-1:] + old_players_ids[:-1]
 
-        def index(l: List, obj) -> int:
+        def index(ln: List, obj) -> int:
             try:
-                return l.index(obj)
+                return ln.index(obj)
             except ValueError:
                 return -1
 
@@ -326,7 +326,7 @@ class PokerBotModel:
             )
             if not only_one_player:
                 text += (
-                    f"With combination of cards:\n" +
+                    "With combination of cards:\n" +
                     f"{win_hand}\n\n"
                 )
         text += "/ready to continue"

@@ -3,6 +3,7 @@ token.txt
 
 # State.
 state.dat
+dump.rdb
 
 # Editor and OS.
 
