@@ -1,0 +1,7 @@
+.github
+.vscode
+tests
+.gitignore
+docker-compose.yml
+.git
+__pycache__

@@ -2,7 +2,9 @@ all: install lint test run
 run:
 	python3 main.py
 up:
-	docker-compose up -d
+	docker-compose --env-file .env up -d
+logs:
+	docker-compose logs bot
 down:
 	docker-compose down
 debug:
