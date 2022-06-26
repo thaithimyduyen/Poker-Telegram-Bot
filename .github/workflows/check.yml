@@ -8,8 +8,8 @@ on:
 
 jobs:
   test:
-    name: Test
     runs-on: ubuntu-latest
+    container: python:3.10.4
 
     services:
       redis:
@@ -21,12 +21,8 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10.4'
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v3
 
       - name: Install dependencies
         run: make install
@@ -37,4 +33,7 @@ jobs:
       - name: Test
         run: make test
         env:
-          POKERBOT_REDIS_HOST: redis
+          POKERBOT_REDIS_HOST: "redis"
+          POKERBOT_REDIS_PORT: "6379"
+          POKERBOT_REDIS_PASS: ""
+          POKERBOT_REDIS_DB: "0"
