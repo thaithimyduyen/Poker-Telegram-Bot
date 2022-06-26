@@ -1,4 +1,4 @@
-all: install check test run
+all: install lint test run
 run:
 	python3 main.py
 up:
