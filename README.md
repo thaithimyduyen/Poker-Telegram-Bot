@@ -12,7 +12,7 @@ All things that we need to do is adding bot to your group chat on telegram and e
 
 **Here is the brief instruction of Texas Poker**\
 Every player has two private cards and on the table has five community cards which are dealt face up in the three stages.
-On the beginning of game, two people which are selected for big and small blinds. This means the blinds are forced to bet, the small blind bet 5$ and the big blind bet 10$.
+On the beginning of game, two people which are selected for big and small blinds. This means the blinds are forced to bet, the small blind bet 5\$ and the big blind bet 10\$.
 when cards are divied to every member, the stages will be started.
 
 There are 4 stages in every game:
