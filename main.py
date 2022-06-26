@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 
-from pokerapp.pokerbot import PokerBot
+import os
 
-TOKEN_FILE = "./token.txt"
+from dotenv import load_dotenv
+
+from pokerapp.config import Config
+from pokerapp.pokerbot import PokerBot
 
 
 def main() -> None:
-    with open(TOKEN_FILE, 'r') as f:
-        token = f.read()
-    bot = PokerBot(token=token)
+    load_dotenv()
+    cfg: Config = Config()
+
+    if cfg.TOKEN == "":
+        print("Environment varaible POKERBOT_TOKEN is not set")
+        os.exit(1)
+
+    bot = PokerBot(token=cfg.TOKEN, cfg=cfg)
     bot.run()
 
 

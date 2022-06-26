@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import datetime
 import redis
 
@@ -8,6 +7,7 @@ from typing import List, Tuple, Dict
 from telegram import Update, Bot
 from telegram.ext import Handler, CallbackContext
 
+from pokerapp.config import Config
 from pokerapp.winnerdetermination import WinnerDetermination
 from pokerapp.cards import Cards
 from pokerapp.entities import (
@@ -21,6 +21,7 @@ from pokerapp.entities import (
     PlayerAction,
     PlayerState,
     Score,
+    Wallet,
 )
 from pokerapp.pokerbotview import PokerBotViewer
 
@@ -31,13 +32,13 @@ KEY_LAST_TIME_ADD_MONEY = "last_time"
 KEY_NOW_TIME_ADD_MONEY = "now_time"
 
 MAX_PLAYERS = 8
-MIN_PLAYERS = 1 if "POKERBOT_DEBUG" in os.environ else 2
+MIN_PLAYERS = 2
 SMALL_BLIND = 5
 MONEY_DAILY = 100
 ONE_DAY = 86400
 DEFAULT_MONEY = 1000
 MAX_TIME_FOR_TURN = datetime.timedelta(minutes=2)
-DESCRIPTION_FILE = "assets/description_bot.txt"
+DESCRIPTION_FILE = "assets/description_bot.md"
 
 
 class PokerBotModel:
@@ -45,13 +46,22 @@ class PokerBotModel:
         self,
         view: PokerBotViewer,
         bot: Bot,
+        cfg: Config,
         kv,
     ):
         self._view: PokerBotViewer = view
         self._bot: Bot = bot
         self._winner_determine: WinnerDetermination = WinnerDetermination()
         self._kv = kv
+        self._cfg: Config = cfg
         self._round_rate: RoundRateModel = RoundRateModel()
+
+    @property
+    def _min_players(self):
+        if self._cfg.DEBUG:
+            return 1
+
+        return MIN_PLAYERS
 
     @staticmethod
     def _game_from_context(context: CallbackContext) -> Game:
@@ -115,7 +125,7 @@ class PokerBotModel:
         players_active = len(game.players)
         # One is the bot.
         if players_active == members_count - 1 and \
-                players_active >= MIN_PLAYERS:
+                players_active >= self._min_players:
             self._start_game(context=context, game=game, chat_id=chat_id)
 
     def start(self, update: Update, context: CallbackContext) -> None:
@@ -136,7 +146,7 @@ class PokerBotModel:
             return
 
         players_active = len(game.players)
-        if players_active >= MIN_PLAYERS:
+        if players_active >= self._min_players:
             self._start_game(context=context, game=game, chat_id=chat_id)
         else:
             self._view.send_message(
@@ -155,9 +165,9 @@ class PokerBotModel:
         old_players_ids = context.chat_data.get(KEY_OLD_PLAYERS, [])
         old_players_ids = old_players_ids[-1:] + old_players_ids[:-1]
 
-        def index(l: List, obj) -> int:
+        def index(ln: List, obj) -> int:
             try:
-                return l.index(obj)
+                return ln.index(obj)
             except ValueError:
                 return -1
 
@@ -326,14 +336,14 @@ class PokerBotModel:
             )
             if not only_one_player:
                 text += (
-                    f"With combination of cards:\n" +
+                    "With combination of cards:\n" +
                     f"{win_hand}\n\n"
                 )
         text += "/ready to continue"
         self._view.send_message(chat_id=chat_id, text=text)
 
         for player in game.players:
-            player.wallet.approve(player.user_id, game.id)
+            player.wallet.approve(game.id)
 
         game.reset()
 
@@ -507,7 +517,7 @@ class PokerBotModel:
         self._process_playing(chat_id=chat_id, game=game)
 
 
-class WalletManagerModel:
+class WalletManagerModel(Wallet):
     def __init__(self, user_id: UserId, kv: redis.Redis):
         self.user_id = user_id
         self._kv = kv
@@ -547,27 +557,26 @@ class WalletManagerModel:
 
     def inc_authorized_money(
         self,
-        user_id: UserId,
         game_id: str,
         amount: Money
     ) -> None:
-        key_authorized_money = self._prefix(user_id, ":" + game_id)
+        key_authorized_money = self._prefix(self.user_id, ":" + game_id)
         self._kv.incrby(key_authorized_money, amount)
 
-    def authorized_money(self, user_id: UserId, game_id: str) -> Money:
-        key_authorized_money = self._prefix(user_id, ":" + game_id)
-        return int(self._kv.get(key_authorized_money))
+    def authorized_money(self, game_id: str) -> Money:
+        key_authorized_money = self._prefix(self.user_id, ":" + game_id)
+        return int(self._kv.get(key_authorized_money) or 0)
 
     def authorize(self, game_id: str, amount: Money) -> None:
         """ Decrease count of money. """
-        self.inc_authorized_money(self.user_id, game_id, amount)
+        self.inc_authorized_money(game_id, amount)
 
         return self.inc(-amount)
 
     def authorize_all(self, game_id: str) -> Money:
         """ Decrease all money of player. """
         money = int(self._kv.get(self._prefix(self.user_id)))
-        self.inc_authorized_money(self.user_id, game_id, money)
+        self.inc_authorized_money(game_id, money)
 
         self._kv.set(self._prefix(self.user_id), 0)
         return money
@@ -576,8 +585,8 @@ class WalletManagerModel:
         """ Get count of money in the wallet. """
         return int(self._kv.get(self._prefix(self.user_id)))
 
-    def approve(self, user_id: UserId, game_id: str) -> None:
-        key_authorized_money = self._prefix(user_id, ":" + game_id)
+    def approve(self, game_id: str) -> None:
+        key_authorized_money = self._prefix(self.user_id, ":" + game_id)
         self._kv.delete(key_authorized_money)
 
 
@@ -622,16 +631,14 @@ class RoundRateModel:
             game.trading_end_user_id = player.user_id
         return amount
 
-    @staticmethod
     def _sum_authorized_money(
+        self,
         game: Game,
         players: List[Tuple[Player, Cards]],
     ) -> int:
         sum_authorized_money = 0
         for player in players:
-            user_id = player[0].user_id
             sum_authorized_money += player[0].wallet.authorized_money(
-                user_id=user_id,
                 game_id=game.id,
             )
         return sum_authorized_money
@@ -664,7 +671,6 @@ class RoundRateModel:
                     break
 
                 authorized = win_player.wallet.authorized_money(
-                    user_id=win_player.user_id,
                     game_id=game.id,
                 )
 

@@ -39,8 +39,8 @@ class TestWinnerDetermination(unittest.TestCase):
             game_lines = f.readlines()
 
         determinator = WinnerDetermination()
-        for l in game_lines:
-            hands = TestWinnerDetermination._parse_hands(l)
+        for ln in game_lines:
+            hands = TestWinnerDetermination._parse_hands(ln)
             got_best_hand = determinator._best_hand_score(hands)[0]
             self.assertListEqual(list1=got_best_hand, list2=hands[0])
 

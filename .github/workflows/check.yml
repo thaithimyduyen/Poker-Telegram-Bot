@@ -1,0 +1,39 @@
+name: check-pokerbot
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: python:3.10.4
+
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+        env:
+          POKERBOT_REDIS_HOST: "redis"
+          POKERBOT_REDIS_PORT: "6379"
+          POKERBOT_REDIS_PASS: ""
+          POKERBOT_REDIS_DB: "0"

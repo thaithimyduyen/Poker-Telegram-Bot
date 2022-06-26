@@ -2,7 +2,7 @@
 
 Welcome to the telegram Bot **"Texas Poker Online"**!!!
 
-**Try it: [@online_poker_bot](https://t.me/@online_poker_bot)**
+**Try it: [@online_poker_bot](https://t.me/online_poker_bot)**
 
 Texas Poker is one of the most popular game nowsday. And of course there are many applications and webs where you can play. We accidently thought about that why don't we playing poker when we are chatting with friends on the telegram. And how the poker game bot was created. 
 
@@ -12,7 +12,7 @@ All things that we need to do is adding bot to your group chat on telegram and e
 
 **Here is the brief instruction of Texas Poker**\
 Every player has two private cards and on the table has five community cards which are dealt face up in the three stages.
-On the beginning of game, two people which are selected for big and small blinds. This means the blinds are forced to bet, the small blind bet 5$ and the big blind bet 10$.
+On the beginning of game, two people which are selected for big and small blinds. This means the blinds are forced to bet, the small blind bet 5\$ and the big blind bet 10\$.
 when cards are divied to every member, the stages will be started.
 
 There are 4 stages in every game:
@@ -42,7 +42,7 @@ The winner is determinated by various combinations of Poker hands rank from five
 
 ### How to use ?
 
-1. Create a token file `make token.txt TOKEN="YOUR TOKEN"`.
+1. Create a token file `make .env TOKEN="POKERBOT_TOKEN"`.
 2. Start the bot `make`.
 
 ### License
@@ -53,4 +53,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COP
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

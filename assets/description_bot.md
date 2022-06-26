@@ -1,7 +1,18 @@
 Welcome to Bot - "Texas Poker"
-At first, add Bot to your telegram group.
-Then every member of the group should send command /ready to start the new game.
-Enjoy the time with Bot!
+It is open-source: https://github.com/thaithimyduyen/Poker-Telegram-Bot
+
+*How*:
+1. Add this bot to your telegram group.
+2. Each member of the group should send the command /ready in order to start the game.
+3. Everyone can see only his cards in the inline menu.
+4. Enjoy the time with the Bot!
+
+*Commands*:
+- /start - start the game without waiting for all users to be ready.
+- /ready - mark yourself ready, when all players are ready, the game will be started.
+- /money - increase daily bonuse.
+- /ban   - ban a current player if he didn't make a move in 2 minutes.
+- /cards - show your cards to you.
 
 *Here is the brief instruction of Texas Poker*:
 Every player has two private cards and on the table has five community cards which are dealt face up in the three stages.

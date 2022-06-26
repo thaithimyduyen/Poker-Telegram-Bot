@@ -21,14 +21,12 @@ from telegram.error import (
     Unauthorized,
 )
 
+from pokerapp.config import Config
 from pokerapp.pokerbotcontrol import PokerBotCotroller
 from pokerapp.pokerbotmodel import PokerBotModel
 from pokerapp.pokerbotview import PokerBotViewer
 from pokerapp.entities import ChatId
 
-REDIS_HOST = "localhost"
-REDIS_PORT = 6379
-REDIS_DB = 0
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -40,7 +38,7 @@ class PokerBot:
     def __init__(
         self,
         token: str,
-        state_file: str = "./state.dat"
+        cfg: Config,
     ):
         req = Request(con_pool_size=8)
         bot = MessageDelayBot(token=token, request=req)
@@ -52,9 +50,10 @@ class PokerBot:
         )
 
         kv = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
+            host=cfg.REDIS_HOST,
+            port=cfg.REDIS_PORT,
+            db=cfg.REDIS_DB,
+            password=cfg.REDIS_PASS if cfg.REDIS_PASS != "" else None
         )
 
         self._view = PokerBotViewer(bot=bot)
@@ -62,6 +61,7 @@ class PokerBot:
             view=self._view,
             bot=bot,
             kv=kv,
+            cfg=cfg,
         )
         self._controller = PokerBotCotroller(self._model, self._updater)
 

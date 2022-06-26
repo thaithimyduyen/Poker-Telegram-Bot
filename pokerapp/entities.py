@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from abc import abstractmethod
 import enum
 import datetime
 from typing import Tuple, List
@@ -15,12 +16,43 @@ Score = int
 Money = int
 
 
+@abstractmethod
+class Wallet:
+    @staticmethod
+    def _prefix(id: int, suffix: str = ""):
+        pass
+
+    def add_daily(self) -> Money:
+        pass
+
+    def inc(self, amount: Money = 0) -> None:
+        pass
+
+    def inc_authorized_money(self, game_id: str, amount: Money) -> None:
+        pass
+
+    def authorized_money(self, game_id: str) -> Money:
+        pass
+
+    def authorize(self, game_id: str, amount: Money) -> None:
+        pass
+
+    def authorize_all(self, game_id: str) -> Money:
+        pass
+
+    def value(self) -> Money:
+        pass
+
+    def approve(self, game_id: str) -> None:
+        pass
+
+
 class Player:
     def __init__(
         self,
         user_id: UserId,
         mention_markdown: Mention,
-        wallet,
+        wallet: Wallet,
     ):
         self.user_id = user_id
         self.mention_markdown = mention_markdown
@@ -48,7 +80,7 @@ class Game:
         self.pot = 0
         self.max_round_rate = 0
         self.state = GameState.INITIAL
-        self.players = []
+        self.players: List[Player] = []
         self.cards_table = []
         self.current_player_index = -1
         self.remain_cards = get_cards()
