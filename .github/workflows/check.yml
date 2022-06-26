@@ -1,0 +1,40 @@
+name: check-pokerbot
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.4'
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+        env:
+          POKERBOT_REDIS_HOST: redis

@@ -2,7 +2,7 @@
 
 Welcome to the telegram Bot **"Texas Poker Online"**!!!
 
-**Try it: [@online_poker_bot](https://t.me/@online_poker_bot)**
+**Try it: [@online_poker_bot](https://t.me/online_poker_bot)**
 
 Texas Poker is one of the most popular game nowsday. And of course there are many applications and webs where you can play. We accidently thought about that why don't we playing poker when we are chatting with friends on the telegram. And how the poker game bot was created. 
 
@@ -42,7 +42,7 @@ The winner is determinated by various combinations of Poker hands rank from five
 
 ### How to use ?
 
-1. Create a token file `make token.txt TOKEN="YOUR TOKEN"`.
+1. Create a token file `make .env TOKEN="POKERBOT_TOKEN"`.
 2. Start the bot `make`.
 
 ### License
