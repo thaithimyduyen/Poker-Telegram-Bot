@@ -42,8 +42,8 @@ The winner is determinated by various combinations of Poker hands rank from five
 
 ### How to use ?
 
-1. Create a token file `make .env TOKEN="POKERBOT_TOKEN"`.
-2. Start the bot `make`.
+1. Create a token file `make .env POKERBOT_TOKEN="POKERBOT_TOKEN"`.
+2. Start the bot `make up`.
 
 ### License
 
