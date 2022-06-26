@@ -38,7 +38,7 @@ MONEY_DAILY = 100
 ONE_DAY = 86400
 DEFAULT_MONEY = 1000
 MAX_TIME_FOR_TURN = datetime.timedelta(minutes=2)
-DESCRIPTION_FILE = "assets/description_bot.txt"
+DESCRIPTION_FILE = "assets/description_bot.md"
 
 
 class PokerBotModel:
