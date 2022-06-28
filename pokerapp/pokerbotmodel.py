@@ -287,6 +287,7 @@ class PokerBotModel:
             chat_id=chat_id,
             game=game,
             player=current_player,
+            money=current_player_money,
         )
 
     def add_cards_to_table(
