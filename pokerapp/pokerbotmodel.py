@@ -485,17 +485,20 @@ class PokerBotModel:
         chat_id = update.effective_message.chat_id
         player = self._current_turn_player(game)
 
-        action = PlayerAction.RAISE_RATE
-        if player.round_rate == game.max_round_rate:
-            action = PlayerAction.BET
-
-        self._view.send_message(
-            chat_id=chat_id,
-            text=player.mention_markdown +
-            f" {action.value} {raise_bet_rate.value}$"
-        )
-
         try:
+            action = PlayerAction.RAISE_RATE
+            if player.round_rate == game.max_round_rate:
+                action = PlayerAction.BET
+
+            if player.wallet.value() < raise_bet_rate.value:
+                return self.all_in(update=update, context=context)
+
+            self._view.send_message(
+                chat_id=chat_id,
+                text=player.mention_markdown +
+                f" {action.value} {raise_bet_rate.value}$"
+            )
+
             self._round_rate.raise_rate_bet(game, player, raise_bet_rate.value)
         except UserException as e:
             self._view.send_message(chat_id=chat_id, text=str(e))
