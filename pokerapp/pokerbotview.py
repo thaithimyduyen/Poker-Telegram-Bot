@@ -152,10 +152,9 @@ class PokerBotViewer:
         else:
             cards_table = " ".join(game.cards_table)
         text = (
-            "{}, it is your turn\n" +
-            "Cards on the table: \n" +
+            "Turn of {}\n" +
             "{}\n" +
-            "Your money: *{}$*\n" +
+            "Money: *{}$*\n" +
             "Max round rate: *{}$*"
         ).format(
             player.mention_markdown,
