@@ -538,7 +538,10 @@ class WalletManagerModel(Wallet):
         last_date = self._kv.get(key_daily)
 
         if last_date is not None and last_date.decode("utf-8") == current_date:
-            raise UserException("You have already received the bonus today")
+            raise UserException(
+                "You have already received the bonus today\n"
+                f"Your money: {self.value()}$"
+            )
 
         self._kv.set(key_daily, current_date)
 
