@@ -42,8 +42,11 @@ The winner is determinated by various combinations of Poker hands rank from five
 
 ### How to use ?
 
-1. Create a token file `make .env TOKEN="POKERBOT_TOKEN"`.
-2. Start the bot `make`.
+1. Ensure you have `docker`, `docker-compose`, and `make` installed.
+2. Create a token file `make .env POKERBOT_TOKEN="POKERBOT_TOKEN"`.
+
+    > Get token from [@BotFather](https://telegram.me/BotFather).
+3. Start the bot `make up`.
 
 ### License
 

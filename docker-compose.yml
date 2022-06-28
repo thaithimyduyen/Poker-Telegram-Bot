@@ -9,5 +9,11 @@ services:
       - redis_data:/data
     command: "redis-server --save 60 1 --loglevel warning"
 
+  bot:
+    build: .
+    environment:
+      - POKERBOT_TOKEN=$POKERBOT_TOKEN
+      - POKERBOT_REDIS_HOST=redis
+
 volumes:
   redis_data:

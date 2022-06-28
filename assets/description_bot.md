@@ -10,7 +10,7 @@ It is open-source: https://github.com/thaithimyduyen/Poker-Telegram-Bot
 *Commands*:
 - /start - start the game without waiting for all users to be ready.
 - /ready - mark yourself ready, when all players are ready, the game will be started.
-- /money - increase daily bonuse.
+- /money - get daily money bonus.
 - /ban   - ban a current player if he didn't make a move in 2 minutes.
 - /cards - show your cards to you.
 
