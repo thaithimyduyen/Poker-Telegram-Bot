@@ -189,11 +189,12 @@ class PokerBotModel:
         )
 
     def bonus(self, update: Update, context: CallbackContext) -> None:
-        wallet = WalletManagerModel(update.effective_message.from_user.id, self._kv)
+        wallet = WalletManagerModel(
+            update.effective_message.from_user.id, self._kv)
         money = wallet.value()
 
-        chat_id=update.effective_message.chat_id
-        message_id=update.effective_message.message_id
+        chat_id = update.effective_message.chat_id
+        message_id = update.effective_message.message_id
 
         if wallet.has_daily_bonus():
             return self._view.send_message_reply(
@@ -202,18 +203,20 @@ class PokerBotModel:
                 text=f"Your money: *{money}$*\n",
             )
 
-        dice_msg = self._view.send_dice_reply(chat_id=chat_id, message_id=message_id)
+        dice_msg = self._view.send_dice_reply(
+            chat_id=chat_id, message_id=message_id)
         message_id = dice_msg.message_id
         bonus = dice_msg.dice.value * DICE_MULT
         money = wallet.add_daily(amount=bonus)
 
         dice_definition = "⚀⚁⚂⚃⚄⚅"[dice_msg.dice.value-1]
 
-        def  print_bonus() -> None:
+        def print_bonus() -> None:
             self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=message_id,
-                text=f"Bonus: *{bonus}$* {dice_definition}\nYour money: *{money}$*\n",
+                text=f"Bonus: *{bonus}$* {dice_definition}\n" +
+                "Your money: *{money}$*\n",
             )
 
         Timer(DICE_DELAY_SEC, print_bonus).start()
@@ -556,7 +559,7 @@ class WalletManagerModel(Wallet):
 
     def _current_date(self) -> str:
         return datetime.datetime.utcnow().strftime("%d/%m/%y")
-    
+
     def _key_daily(self) -> str:
         return self._prefix(self.user_id, ":daily")
 
@@ -564,7 +567,8 @@ class WalletManagerModel(Wallet):
         current_date = self._current_date()
         last_date = self._kv.get(self._key_daily())
 
-        return last_date is not None and last_date.decode("utf-8") == current_date
+        return last_date is not None and \
+            last_date.decode("utf-8") == current_date
 
     def add_daily(self, amount: Money) -> Money:
         if self.has_daily_bonus():
