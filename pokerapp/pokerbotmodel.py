@@ -29,6 +29,8 @@ from pokerapp.pokerbotview import PokerBotViewer
 
 DICE_MULT = 10
 DICE_DELAY_SEC = 5
+BONUSES = (5, 10, 20, 40, 80, 160)
+DICES = "⚀⚁⚂⚃⚄⚅"
 
 KEY_CHAT_DATA_GAME = "game"
 KEY_OLD_PLAYERS = "old_players"
@@ -206,16 +208,16 @@ class PokerBotModel:
         dice_msg = self._view.send_dice_reply(
             chat_id=chat_id, message_id=message_id)
         message_id = dice_msg.message_id
-        bonus = dice_msg.dice.value * DICE_MULT
-        money = wallet.add_daily(amount=bonus)
 
-        dice_definition = "⚀⚁⚂⚃⚄⚅"[dice_msg.dice.value-1]
+        bonus = BONUSES[dice_msg.dice.value - 1]
+        icon = DICES[dice_msg.dice.value-1]
+        money = wallet.add_daily(amount=bonus)
 
         def print_bonus() -> None:
             self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=message_id,
-                text=f"Bonus: *{bonus}$* {dice_definition}\n" +
+                text=f"Bonus: *{bonus}$* {icon}\n" +
                 f"Your money: *{money}$*\n",
             )
 
