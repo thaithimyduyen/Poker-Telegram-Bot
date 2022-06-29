@@ -216,7 +216,7 @@ class PokerBotModel:
                 chat_id=chat_id,
                 message_id=message_id,
                 text=f"Bonus: *{bonus}$* {dice_definition}\n" +
-                "Your money: *{money}$*\n",
+                f"Your money: *{money}$*\n",
             )
 
         Timer(DICE_DELAY_SEC, print_bonus).start()
