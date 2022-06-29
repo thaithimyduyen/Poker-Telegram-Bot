@@ -60,16 +60,18 @@ The winner is determinated by various combinations of Poker hands rank from five
 3. My cards are overlaped with someone else on MacOS Telegram.
    It is a bug of MacOS desktop client.
 4. How bonus is calculated?
-    It is random and depends on the number on the side of a die.
+   It is random and depends on the number on the side of a die.
 
-    | side | virtual bonus money |
-    | ---- | ------------------- |
-    | ⚀    | 5                   |
-    | ⚁    | 10                  |
-    | ⚂    | 20                  |
-    | ⚃    | 40                  |
-    | ⚄    | 80                  |
-    | ⚅    | 160                 |
+   | side | virtual bonus money |
+   | ---- | ------------------- |
+   | ⚀    | 5                   |
+   | ⚁    | 10                  |
+   | ⚂    | 20                  |
+   | ⚃    | 40                  |
+   | ⚄    | 80                  |
+   | ⚅    | 160                 |
+5. A player doesn't want to make a turn or cannot.
+   After two minutes send `/ban`.
 
 ### License
 
