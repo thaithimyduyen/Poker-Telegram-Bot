@@ -58,7 +58,7 @@ The winner is determinated by various combinations of Poker hands rank from five
    to send `/cards` to the chat.
    There is a bug on iOS about hiding inline keyboard.
 3. My cards are overlaped with someone else on MacOS Telegram.
-   It is a bug of MacOS desktop client.
+   It is a bug of [MacOS desktop client](https://github.com/overtake/TelegramSwift/issues/575).
 4. How bonus is calculated?
    It is random and depends on the number on the side of a die.
 
