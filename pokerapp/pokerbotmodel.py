@@ -61,6 +61,8 @@ class PokerBotModel:
         self._cfg: Config = cfg
         self._round_rate: RoundRateModel = RoundRateModel()
 
+        self._readyMessages = {}
+
     @property
     def _min_players(self):
         if self._cfg.DEBUG:
@@ -112,7 +114,8 @@ class PokerBotModel:
         player = Player(
             user_id=user.id,
             mention_markdown=user.mention_markdown(),
-            wallet=WalletManagerModel(user.id, self._kv)
+            wallet=WalletManagerModel(user.id, self._kv),
+            ready_message_id=update.effective_message.message_id,
         )
 
         if player.wallet.value() < 2*SMALL_BLIND:
@@ -242,6 +245,7 @@ class PokerBotModel:
             chat_id=update.effective_message.chat_id,
             cards=current_player.cards,
             mention_markdown=current_player.mention_markdown,
+            ready_message_id=update.effective_message.message_id,
         )
 
     def _check_access(self, chat_id: ChatId, user_id: UserId) -> bool:
@@ -261,6 +265,7 @@ class PokerBotModel:
                 chat_id=chat_id,
                 cards=cards,
                 mention_markdown=player.mention_markdown,
+                ready_message_id=player.ready_message_id,
             )
 
     def _process_playing(self, chat_id: ChatId, game: Game) -> None:

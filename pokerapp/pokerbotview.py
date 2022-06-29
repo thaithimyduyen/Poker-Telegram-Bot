@@ -133,12 +133,14 @@ class PokerBotViewer:
             chat_id: ChatId,
             cards: Cards,
             mention_markdown: Mention,
+            ready_message_id: str,
     ) -> None:
         markup = PokerBotViewer._get_cards_markup(cards)
         self._bot.send_message(
             chat_id=chat_id,
             text="Showing cards to " + mention_markdown,
             reply_markup=markup,
+            reply_to_message_id=ready_message_id,
             parse_mode=ParseMode.MARKDOWN
         )
 
