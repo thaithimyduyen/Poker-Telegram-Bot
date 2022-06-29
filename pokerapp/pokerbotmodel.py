@@ -148,7 +148,7 @@ class PokerBotModel:
             chat_id = update.effective_message.chat_id
             self._view.send_message(
                 chat_id=chat_id,
-                text=text
+                text=text,
             )
             self._view.send_photo(chat_id=chat_id)
             return
@@ -446,13 +446,13 @@ class PokerBotModel:
         if diff < MAX_TIME_FOR_TURN:
             self._view.send_message(
                 chat_id=chat_id,
-                text="You can't ban. Max turn time is 2 minutes"
+                text="You can't ban. Max turn time is 2 minutes",
             )
             return
 
         self._view.send_message(
             chat_id=chat_id,
-            text="Time is over!"
+            text="Time is over!",
         )
         self.fold(update, context)
 
