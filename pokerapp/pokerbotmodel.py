@@ -2,6 +2,7 @@
 
 import datetime
 import redis
+from threading import Timer
 
 from typing import List, Tuple, Dict
 from telegram import Update, Bot
@@ -26,6 +27,9 @@ from pokerapp.entities import (
 from pokerapp.pokerbotview import PokerBotViewer
 
 
+DICE_MULT = 10
+DICE_DELAY_SEC = 5
+
 KEY_CHAT_DATA_GAME = "game"
 KEY_OLD_PLAYERS = "old_players"
 KEY_LAST_TIME_ADD_MONEY = "last_time"
@@ -34,7 +38,6 @@ KEY_NOW_TIME_ADD_MONEY = "now_time"
 MAX_PLAYERS = 8
 MIN_PLAYERS = 2
 SMALL_BLIND = 5
-MONEY_DAILY = 100
 ONE_DAY = 86400
 DEFAULT_MONEY = 1000
 MAX_TIME_FOR_TURN = datetime.timedelta(minutes=2)
@@ -121,7 +124,7 @@ class PokerBotModel:
 
         game.players.append(player)
 
-        members_count = self._bot.get_chat_members_count(chat_id)
+        members_count = self._bot.get_chat_member_count(chat_id)
         players_active = len(game.players)
         # One is the bot.
         if players_active == members_count - 1 and \
@@ -132,7 +135,7 @@ class PokerBotModel:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
         # One is the bot.
-        members_count = self._bot.get_chat_members_count(chat_id) - 1
+        members_count = self._bot.get_chat_member_count(chat_id) - 1
         if members_count == 1:
             with open(DESCRIPTION_FILE, 'r') as f:
                 text = f.read()
@@ -185,23 +188,35 @@ class PokerBotModel:
             map(lambda p: p.user_id, game.players),
         )
 
-    def add_money(self, update: Update, context: CallbackContext) -> None:
-        user_id = update.effective_message.from_user.id
-        chat_id = update.effective_message.chat_id
-        try:
-            money = WalletManagerModel(user_id, self._kv).add_daily()
-        except UserException as e:
-            print(e)
-            self._view.send_message(
+    def bonus(self, update: Update, context: CallbackContext) -> None:
+        wallet = WalletManagerModel(update.effective_message.from_user.id, self._kv)
+        money = wallet.value()
+
+        chat_id=update.effective_message.chat_id
+        message_id=update.effective_message.message_id
+
+        if wallet.has_daily_bonus():
+            return self._view.send_message_reply(
                 chat_id=chat_id,
-                text=str(e))
-            return
-        self._view.send_message_reply(
-            chat_id=chat_id,
-            message_id=update.effective_message.message_id,
-            text=f"Add to your wallet {MONEY_DAILY}$\n" +
-            f"Your money: {money}$"
-        )
+                message_id=update.effective_message.message_id,
+                text=f"Your money: *{money}$*\n",
+            )
+
+        dice_msg = self._view.send_dice_reply(chat_id=chat_id, message_id=message_id)
+        message_id = dice_msg.message_id
+        bonus = dice_msg.dice.value * DICE_MULT
+        money = wallet.add_daily(amount=bonus)
+
+        dice_definition = "⚀⚁⚂⚃⚄⚅"[dice_msg.dice.value-1]
+
+        def  print_bonus() -> None:
+            self._view.send_message_reply(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=f"Bonus: *{bonus}$* {dice_definition}\nYour money: *{money}$*\n",
+            )
+
+        Timer(DICE_DELAY_SEC, print_bonus).start()
 
     def send_cards_to_user(
         self,
@@ -539,22 +554,29 @@ class WalletManagerModel(Wallet):
     def _prefix(id: int, suffix: str = ""):
         return "pokerbot:" + str(id) + suffix
 
-    def add_daily(self) -> Money:
-        key = self._prefix(self.user_id)
-        key_daily = self._prefix(self.user_id, ":daily")
+    def _current_date(self) -> str:
+        return datetime.datetime.utcnow().strftime("%d/%m/%y")
+    
+    def _key_daily(self) -> str:
+        return self._prefix(self.user_id, ":daily")
 
-        current_date = datetime.datetime.utcnow().strftime("%d/%m/%y")
-        last_date = self._kv.get(key_daily)
+    def has_daily_bonus(self) -> bool:
+        current_date = self._current_date()
+        last_date = self._kv.get(self._key_daily())
 
-        if last_date is not None and last_date.decode("utf-8") == current_date:
+        return last_date is not None and last_date.decode("utf-8") == current_date
+
+    def add_daily(self, amount: Money) -> Money:
+        if self.has_daily_bonus():
             raise UserException(
                 "You have already received the bonus today\n"
                 f"Your money: {self.value()}$"
             )
 
-        self._kv.set(key_daily, current_date)
+        key = self._prefix(self.user_id)
+        self._kv.set(self._key_daily(), self._current_date())
 
-        return self._kv.incrby(key, MONEY_DAILY)
+        return self._kv.incrby(key, amount)
 
     def inc(self, amount: Money = 0) -> None:
         """ Increase count of money in the wallet.

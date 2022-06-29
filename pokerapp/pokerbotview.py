@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from telegram import (
+    Dice,
+    Message,
     ParseMode,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -41,6 +43,16 @@ class PokerBotViewer:
             photo=open("./assets/poker_hand.jpg", 'rb'),
             parse_mode=ParseMode.MARKDOWN,
         )
+    
+    def send_dice_reply(
+        self,
+        chat_id: ChatId,
+        message_id: MessageId,
+    ) -> Message:
+        return self._bot.send_dice(
+            reply_to_message_id=message_id,
+            chat_id=chat_id,
+        )
 
     def send_message_reply(
         self,
@@ -48,6 +60,7 @@ class PokerBotViewer:
         message_id: MessageId,
         text: str,
     ) -> None:
+        
         self._bot.send_message(
             reply_to_message_id=message_id,
             chat_id=chat_id,
