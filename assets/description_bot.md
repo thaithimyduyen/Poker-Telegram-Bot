@@ -37,3 +37,6 @@ A betting interval ends when the bets have been equalized and the new stage will
 The game can end any time if there is only one players in the game and of course when the winner is defined.
 After four stages, every member will be show their best hand (five cards from seven cards) to determinate the winner.
 The winner is determinated by various combinations of Poker hands rank from five of a kind (the highest) to no pair or nothing (the lowest) 
+
+*You will receive game cards to this chat*
+To stop it, run /stop.

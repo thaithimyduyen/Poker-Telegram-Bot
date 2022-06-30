@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
 import datetime
-import redis
+import traceback
 from threading import Timer
-
 from typing import List, Tuple, Dict
-from telegram import Update, Bot
+
+import redis
+from telegram import ReplyKeyboardMarkup, Update, Bot
 from telegram.ext import Handler, CallbackContext
 
 from pokerapp.config import Config
+from pokerapp.privatechatmodel import UserPrivateChatModel
 from pokerapp.winnerdetermination import WinnerDetermination
 from pokerapp.cards import Cards
 from pokerapp.entities import (
@@ -107,7 +109,7 @@ class PokerBotModel:
             self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=update.effective_message.message_id,
-                text="You has already been ready",
+                text="You are already ready",
             )
             return
 
@@ -136,9 +138,14 @@ class PokerBotModel:
                 players_active >= self._min_players:
             self._start_game(context=context, game=game, chat_id=chat_id)
 
+    def stop(self, user_id: UserId) -> None:
+        UserPrivateChatModel(user_id=user_id, kv=self._kv).delete()
+
     def start(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
         chat_id = update.effective_message.chat_id
+        user_id = update.effective_message.from_user.id
+
         # One is the bot.
         members_count = self._bot.get_chat_member_count(chat_id) - 1
         if members_count == 1:
@@ -151,6 +158,11 @@ class PokerBotModel:
                 text=text,
             )
             self._view.send_photo(chat_id=chat_id)
+
+            if update.effective_chat.type == 'private':
+                UserPrivateChatModel(user_id=user_id, kv=self._kv) \
+                    .set_chat_id(chat_id=chat_id)
+
             return
 
         players_active = len(game.players)
@@ -169,6 +181,14 @@ class PokerBotModel:
         game: Game,
         chat_id: ChatId
     ) -> None:
+        self._view.send_message(
+            chat_id=chat_id,
+            text='The game is started! 🃏',
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[["poker"]],
+                resize_keyboard=True,
+            ),
+        )
 
         old_players_ids = context.chat_data.get(KEY_OLD_PLAYERS, [])
         old_players_ids = old_players_ids[-1:] + old_players_ids[:-1]
@@ -255,12 +275,55 @@ class PokerBotModel:
                 return True
         return False
 
+    def _send_cards_private(self, player: Player, cards: Cards) -> None:
+        user_chat_model = UserPrivateChatModel(
+            user_id=player.user_id,
+            kv=self._kv,
+        )
+        private_chat_id = user_chat_model.get_chat_id()
+
+        if private_chat_id is None:
+            raise ValueError("private chat not found")
+
+        private_chat_id = private_chat_id.decode('utf-8')
+
+        message_id = self._view.send_desk_cards_img(
+            chat_id=private_chat_id,
+            cards=cards,
+            caption="Your cards",
+            disable_notification=False,
+        ).message_id
+
+        try:
+            rm_msg_id = user_chat_model.pop_message()
+            while rm_msg_id is not None:
+                rm_msg_id = rm_msg_id.decode('utf-8')
+                self._view.remove_message(
+                    chat_id=private_chat_id,
+                    message_id=rm_msg_id,
+                )
+                rm_msg_id = user_chat_model.pop_message()
+
+            user_chat_model.push_message(message_id=message_id)
+        except Exception as ex:
+            print(ex)
+            traceback.print_exc()
+
     def _divide_cards(self, game: Game, chat_id: ChatId) -> None:
         for player in game.players:
             cards = player.cards = [
                 game.remain_cards.pop(),
                 game.remain_cards.pop(),
             ]
+
+            try:
+                self._send_cards_private(player=player, cards=cards)
+
+                continue
+            except Exception as ex:
+                print(ex)
+                pass
+
             self._view.send_cards(
                 chat_id=chat_id,
                 cards=cards,
