@@ -48,6 +48,31 @@ The winner is determinated by various combinations of Poker hands rank from five
     > Get token from [@BotFather](https://telegram.me/BotFather).
 3. Start the bot `make up`.
 
+### FAQ
+
+1. It shows `not enough players` after `/start`.
+   All players need to send `/ready`.
+   The command `/start` starts a game only for ready players.
+2. I don't see my cards.
+   All cards are sent in the inline keyboard, if you don't see them, try
+   to send `/cards` to the chat.
+   There is a bug on iOS about hiding inline keyboard.
+3. My cards are overlaped with someone else on MacOS Telegram.
+   It is a bug of [MacOS desktop client](https://github.com/overtake/TelegramSwift/issues/575).
+4. How bonus is calculated?
+   It is random and depends on the number on the side of a die.
+
+   | side | virtual bonus money |
+   | ---- | ------------------- |
+   | ⚀    | 5                   |
+   | ⚁    | 10                  |
+   | ⚂    | 20                  |
+   | ⚃    | 40                  |
+   | ⚄    | 80                  |
+   | ⚅    | 160                 |
+5. A player doesn't want to make a turn or cannot.
+   After two minutes send `/ban`.
+
 ### License
 
 Copyright 2020 Thái Thị Mỹ Duyên

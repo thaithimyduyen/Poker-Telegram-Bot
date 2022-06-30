@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from telegram import (
+    Message,
     ParseMode,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -32,6 +33,7 @@ class PokerBotViewer:
             chat_id=chat_id,
             parse_mode=ParseMode.MARKDOWN,
             text=text,
+            disable_notification=True,
         )
 
     def send_photo(self, chat_id: ChatId) -> None:
@@ -40,6 +42,18 @@ class PokerBotViewer:
             chat_id=chat_id,
             photo=open("./assets/poker_hand.jpg", 'rb'),
             parse_mode=ParseMode.MARKDOWN,
+            disable_notification=True,
+        )
+
+    def send_dice_reply(
+        self,
+        chat_id: ChatId,
+        message_id: MessageId,
+    ) -> Message:
+        return self._bot.send_dice(
+            reply_to_message_id=message_id,
+            chat_id=chat_id,
+            disable_notification=True,
         )
 
     def send_message_reply(
@@ -53,6 +67,7 @@ class PokerBotViewer:
             chat_id=chat_id,
             parse_mode=ParseMode.MARKDOWN,
             text=text,
+            disable_notification=True,
         )
 
     def send_desk_cards_img(
@@ -71,6 +86,7 @@ class PokerBotViewer:
             photo=bio,
             caption=caption,
             parse_mode=ParseMode.MARKDOWN,
+            disable_notification=True,
         )
 
     @staticmethod
@@ -122,13 +138,16 @@ class PokerBotViewer:
             chat_id: ChatId,
             cards: Cards,
             mention_markdown: Mention,
+            ready_message_id: str,
     ) -> None:
         markup = PokerBotViewer._get_cards_markup(cards)
         self._bot.send_message(
             chat_id=chat_id,
             text="Showing cards to " + mention_markdown,
             reply_markup=markup,
-            parse_mode=ParseMode.MARKDOWN
+            reply_to_message_id=ready_message_id,
+            parse_mode=ParseMode.MARKDOWN,
+            disable_notification=True,
         )
 
     @staticmethod
@@ -152,10 +171,9 @@ class PokerBotViewer:
         else:
             cards_table = " ".join(game.cards_table)
         text = (
-            "{}, it is your turn\n" +
-            "Cards on the table: \n" +
+            "Turn of {}\n" +
             "{}\n" +
-            "Your money: *{}$*\n" +
+            "Money: *{}$*\n" +
             "Max round rate: *{}$*"
         ).format(
             player.mention_markdown,
@@ -171,7 +189,8 @@ class PokerBotViewer:
             chat_id=chat_id,
             text=text,
             reply_markup=markup,
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.MARKDOWN,
+            disable_notification=True,
         )
 
     def remove_markup(

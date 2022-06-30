@@ -38,7 +38,12 @@ class TestRoundRateModel(unittest.TestCase):
         wallet_manager.inc(autorized)
         wallet_manager.authorize(game.id, autorized)
         game.pot += autorized
-        p = Player(self._user_id, "@test", wallet=wallet_manager)
+        p = Player(
+            user_id=self._user_id,
+            mention_markdown="@test",
+            wallet=wallet_manager,
+            ready_message_id="",
+        )
         game.players.append(p)
 
         return p

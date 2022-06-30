@@ -53,6 +53,7 @@ class Player:
         user_id: UserId,
         mention_markdown: Mention,
         wallet: Wallet,
+        ready_message_id: str,
     ):
         self.user_id = user_id
         self.mention_markdown = mention_markdown
@@ -60,6 +61,7 @@ class Player:
         self.wallet = wallet
         self.cards = []
         self.round_rate = 0
+        self.ready_message_id = ready_message_id
 
     def __repr__(self):
         return "{}({!r})".format(self.__class__.__name__, self.__dict__)
