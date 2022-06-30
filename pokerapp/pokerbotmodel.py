@@ -394,7 +394,7 @@ class PokerBotModel:
         self._view.send_desk_cards_img(
             chat_id=chat_id,
             cards=game.cards_table,
-            caption=f"*Current pot:* {game.pot}$",
+            caption=f"Current pot: {game.pot}$",
         )
 
     def _finish(
