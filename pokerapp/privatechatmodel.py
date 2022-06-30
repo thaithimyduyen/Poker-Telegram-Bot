@@ -26,6 +26,8 @@ class UserPrivateChatModel:
         return self._kv.set(self._key, chat_id)
 
     def delete(self) -> None:
+        self._kv.delete(self._key + ":messages")
+
         return self._kv.delete(self._key)
 
     def pop_message(self) -> Union[MessageId, NoneType]:

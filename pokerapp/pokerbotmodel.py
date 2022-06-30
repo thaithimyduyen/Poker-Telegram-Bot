@@ -297,16 +297,20 @@ class PokerBotModel:
         try:
             rm_msg_id = user_chat_model.pop_message()
             while rm_msg_id is not None:
-                rm_msg_id = rm_msg_id.decode('utf-8')
-                self._view.remove_message(
-                    chat_id=private_chat_id,
-                    message_id=rm_msg_id,
-                )
-                rm_msg_id = user_chat_model.pop_message()
+                try:
+                    rm_msg_id = rm_msg_id.decode('utf-8')
+                    self._view.remove_message(
+                        chat_id=private_chat_id,
+                        message_id=rm_msg_id,
+                    )
+                    rm_msg_id = user_chat_model.pop_message()
+                except Exception as ex:
+                    print("remove_message", ex)
+                    traceback.print_exc()
 
             user_chat_model.push_message(message_id=message_id)
         except Exception as ex:
-            print(ex)
+            print("bulk_remove_message", ex)
             traceback.print_exc()
 
     def _divide_cards(self, game: Game, chat_id: ChatId) -> None:
