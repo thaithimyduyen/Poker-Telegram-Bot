@@ -65,11 +65,11 @@ The winner is determinated by various combinations of Poker hands rank from five
    | side | virtual bonus money |
    | ---- | ------------------- |
    | ⚀    | 5                   |
-   | ⚁    | 10                  |
-   | ⚂    | 20                  |
-   | ⚃    | 40                  |
-   | ⚄    | 80                  |
-   | ⚅    | 160                 |
+   | ⚁    | 20                  |
+   | ⚂    | 40                  |
+   | ⚃    | 80                  |
+   | ⚄    | 160                 |
+   | ⚅    | 320                 |
 5. A player doesn't want to make a turn or cannot.
    After two minutes send `/ban`.
 

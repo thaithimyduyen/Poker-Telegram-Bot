@@ -31,7 +31,7 @@ from pokerapp.pokerbotview import PokerBotViewer
 
 DICE_MULT = 10
 DICE_DELAY_SEC = 5
-BONUSES = (5, 10, 20, 40, 80, 160)
+BONUSES = (5, 20, 40, 80, 160, 320)
 DICES = "⚀⚁⚂⚃⚄⚅"
 
 KEY_CHAT_DATA_GAME = "game"
