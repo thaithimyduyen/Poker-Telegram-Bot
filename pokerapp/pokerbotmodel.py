@@ -303,10 +303,10 @@ class PokerBotModel:
                         chat_id=private_chat_id,
                         message_id=rm_msg_id,
                     )
-                    rm_msg_id = user_chat_model.pop_message()
                 except Exception as ex:
                     print("remove_message", ex)
                     traceback.print_exc()
+                rm_msg_id = user_chat_model.pop_message()
 
             user_chat_model.push_message(message_id=message_id)
         except Exception as ex:
