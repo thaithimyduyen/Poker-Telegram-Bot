@@ -202,7 +202,7 @@ class PokerBotModel:
         game.players.sort(key=lambda p: index(old_players_ids, p.user_id))
 
         game.state = GameState.ROUND_PRE_FLOP
-        self._divide_cards(game=game, chat_id=chat_id,)
+        self._divide_cards(game=game, chat_id=chat_id)
 
         game.current_player_index = 1
         self._round_rate.round_pre_flop_rate_before_first_turn(game)
