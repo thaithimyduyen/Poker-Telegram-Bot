@@ -143,6 +143,13 @@ class PokerBotModel:
 
     def start(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
+        if game.state not in (GameState.INITIAL, GameState.FINISHED):
+            self._view.send_message(
+                chat_id=chat_id,
+                text="The game is already in progress"
+            )
+            return
+
         chat_id = update.effective_message.chat_id
         user_id = update.effective_message.from_user.id
 
