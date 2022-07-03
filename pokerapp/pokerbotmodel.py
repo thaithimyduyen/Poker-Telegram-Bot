@@ -188,6 +188,8 @@ class PokerBotModel:
         game: Game,
         chat_id: ChatId
     ) -> None:
+        print(f"new game: {game.id}, players count: {len(game.players)}")
+    
         self._view.send_message(
             chat_id=chat_id,
             text='The game is started! 🃏',
@@ -410,6 +412,8 @@ class PokerBotModel:
         chat_id: ChatId,
     ) -> None:
         self._round_rate.to_pot(game)
+
+        print(f"game finished: {game.id}, players count: {len(game.players)}, pot: {game.pot}")
 
         active_players = game.players_by(
             states=(PlayerState.ACTIVE, PlayerState.ALL_IN)
