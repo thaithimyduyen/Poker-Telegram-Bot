@@ -6,7 +6,7 @@ from threading import Timer
 from typing import List, Tuple, Dict
 
 import redis
-from telegram import ReplyKeyboardMarkup, Update, Bot
+from telegram import Message, ReplyKeyboardMarkup, Update, Bot
 from telegram.ext import Handler, CallbackContext
 
 from pokerapp.config import Config
@@ -143,15 +143,15 @@ class PokerBotModel:
 
     def start(self, update: Update, context: CallbackContext) -> None:
         game = self._game_from_context(context)
+        chat_id = update.effective_message.chat_id
+        user_id = update.effective_message.from_user.id
+
         if game.state not in (GameState.INITIAL, GameState.FINISHED):
             self._view.send_message(
                 chat_id=chat_id,
                 text="The game is already in progress"
             )
             return
-
-        chat_id = update.effective_message.chat_id
-        user_id = update.effective_message.from_user.id
 
         # One is the bot.
         members_count = self._bot.get_chat_member_count(chat_id) - 1
@@ -189,7 +189,7 @@ class PokerBotModel:
         chat_id: ChatId
     ) -> None:
         print(f"new game: {game.id}, players count: {len(game.players)}")
-    
+
         self._view.send_message(
             chat_id=chat_id,
             text='The game is started! 🃏',
@@ -237,12 +237,28 @@ class PokerBotModel:
                 text=f"Your money: *{money}$*\n",
             )
 
-        dice_msg = self._view.send_dice_reply(
-            chat_id=chat_id, message_id=message_id)
-        message_id = dice_msg.message_id
+        icon: str
+        dice_msg: Message
+        bonus: Money
 
-        bonus = BONUSES[dice_msg.dice.value - 1]
-        icon = DICES[dice_msg.dice.value-1]
+        SATURDAY = 5
+        if datetime.datetime.today().weekday() == SATURDAY:
+            dice_msg = self._view.send_dice_reply(
+                chat_id=chat_id,
+                message_id=message_id,
+                emoji='🎰'
+            )
+            icon = '🎰'
+            bonus = dice_msg.dice.value * 20
+        else:
+            dice_msg = self._view.send_dice_reply(
+                chat_id=chat_id,
+                message_id=message_id,
+            )
+            icon = DICES[dice_msg.dice.value-1]
+            bonus = BONUSES[dice_msg.dice.value - 1]
+
+        message_id = dice_msg.message_id
         money = wallet.add_daily(amount=bonus)
 
         def print_bonus() -> None:
@@ -413,7 +429,11 @@ class PokerBotModel:
     ) -> None:
         self._round_rate.to_pot(game)
 
-        print(f"game finished: {game.id}, players count: {len(game.players)}, pot: {game.pot}")
+        print(
+            f"game finished: {game.id}, " +
+            f"players count: {len(game.players)}, " +
+            f"pot: {game.pot}"
+        )
 
         active_players = game.players_by(
             states=(PlayerState.ACTIVE, PlayerState.ALL_IN)

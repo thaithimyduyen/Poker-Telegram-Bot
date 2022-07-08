@@ -57,11 +57,13 @@ class PokerBotViewer:
         self,
         chat_id: ChatId,
         message_id: MessageId,
+        emoji='🎲',
     ) -> Message:
         return self._bot.send_dice(
             reply_to_message_id=message_id,
             chat_id=chat_id,
             disable_notification=True,
+            emoji=emoji,
         )
 
     def send_message_reply(
