@@ -45,5 +45,5 @@ def get_cards() -> Cards:
         Card("7♠"), Card("8♠"), Card("9♠"), Card("10♠"),
         Card("J♠"), Card("Q♠"), Card("K♠"), Card("A♠"),
     ]
-    random.shuffle(cards)
+    random.SystemRandom().shuffle(cards)
     return cards

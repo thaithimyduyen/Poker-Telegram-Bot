@@ -7,6 +7,7 @@ from telegram import (
     InlineKeyboardMarkup,
     ReplyKeyboardMarkup,
     Bot,
+    InputMediaPhoto,
 )
 from io import BytesIO
 
@@ -28,12 +29,19 @@ class PokerBotViewer:
         self._bot = bot
         self._desk_generator = DeskImageGenerator()
 
-    def send_message(self, chat_id: ChatId, text: str) -> None:
+    def send_message(
+        self,
+        chat_id: ChatId,
+        text: str,
+        reply_markup: ReplyKeyboardMarkup = None,
+    ) -> None:
         self._bot.send_message(
             chat_id=chat_id,
             parse_mode=ParseMode.MARKDOWN,
             text=text,
+            reply_markup=reply_markup,
             disable_notification=True,
+            disable_web_page_preview=True,
         )
 
     def send_photo(self, chat_id: ChatId) -> None:
@@ -49,11 +57,13 @@ class PokerBotViewer:
         self,
         chat_id: ChatId,
         message_id: MessageId,
+        emoji='🎲',
     ) -> Message:
         return self._bot.send_dice(
             reply_to_message_id=message_id,
             chat_id=chat_id,
             disable_notification=True,
+            emoji=emoji,
         )
 
     def send_message_reply(
@@ -74,22 +84,26 @@ class PokerBotViewer:
         self,
         chat_id: ChatId,
         cards: Cards,
-        caption="",
-    ):
+        caption: str = "",
+        disable_notification: bool = True,
+    ) -> MessageId:
         im_cards = self._desk_generator.generate_desk(cards)
         bio = BytesIO()
         bio.name = 'desk.png'
         im_cards.save(bio, 'PNG')
         bio.seek(0)
-        return self._bot.send_photo(
+        return self._bot.send_media_group(
             chat_id=chat_id,
-            photo=bio,
-            caption=caption,
-            parse_mode=ParseMode.MARKDOWN,
-            disable_notification=True,
-        )
+            media=[
+                InputMediaPhoto(
+                    media=bio,
+                    caption=caption,
+                ),
+            ],
+            disable_notification=disable_notification,
+        )[0]
 
-    @staticmethod
+    @ staticmethod
     def _get_cards_markup(cards: Cards) -> ReplyKeyboardMarkup:
         return ReplyKeyboardMarkup(
             keyboard=[cards],
@@ -97,7 +111,7 @@ class PokerBotViewer:
             resize_keyboard=True,
         )
 
-    @staticmethod
+    @ staticmethod
     def _get_turns_markup(
         check_call_action: PlayerAction
     ) -> InlineKeyboardMarkup:
@@ -150,7 +164,7 @@ class PokerBotViewer:
             disable_notification=True,
         )
 
-    @staticmethod
+    @ staticmethod
     def define_check_call_action(
         game: Game,
         player: Player,
@@ -199,6 +213,16 @@ class PokerBotViewer:
         message_id: MessageId,
     ) -> None:
         self._bot.edit_message_reply_markup(
+            chat_id=chat_id,
+            message_id=message_id,
+        )
+
+    def remove_message(
+        self,
+        chat_id: ChatId,
+        message_id: MessageId,
+    ) -> None:
+        self._bot.delete_message(
             chat_id=chat_id,
             message_id=message_id,
         )

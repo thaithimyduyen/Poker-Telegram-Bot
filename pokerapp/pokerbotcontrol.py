@@ -23,6 +23,9 @@ class PokerBotCotroller:
             CommandHandler('start', self._handle_start)
         )
         updater.dispatcher.add_handler(
+            CommandHandler('stop', self._handle_stop)
+        )
+        updater.dispatcher.add_handler(
             CommandHandler('money', self._handle_money)
         )
         updater.dispatcher.add_handler(
@@ -44,6 +47,9 @@ class PokerBotCotroller:
 
     def _handle_start(self, update: Update, context: CallbackContext) -> None:
         self._model.start(update, context)
+
+    def _handle_stop(self, update: Update, context: CallbackContext) -> None:
+        self._model.stop(user_id=update.effective_message.from_user.id)
 
     def _handle_cards(self, update: Update, context: CallbackContext) -> None:
         self._model.send_cards_to_user(update, context)
