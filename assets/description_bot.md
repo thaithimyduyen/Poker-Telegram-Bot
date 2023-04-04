@@ -1,6 +1,3 @@
-Welcome to Bot - "Texas Poker"
-It is open-source: https://github.com/thaithimyduyen/Poker-Telegram-Bot
-
 *How*:
 1. Add this bot to your telegram group.
 2. Each member of the group should send the command /ready in order to start the game.
@@ -40,5 +37,3 @@ The winner is determinated by various combinations of Poker hands rank from five
 
 *You will receive game cards to this chat.*
 To stop it, run /stop.
-
-Have the problem? Create an issue: https://github.com/thaithimyduyen/Poker-Telegram-Bot/issues/new
