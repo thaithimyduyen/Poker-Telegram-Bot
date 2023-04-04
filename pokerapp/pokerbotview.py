@@ -188,7 +188,8 @@ class PokerBotViewer:
             "Turn of {}\n" +
             "{}\n" +
             "Money: *{}$*\n" +
-            "Max round rate: *{}$*"
+            "Max round rate: *{}$*\n" +
+            "Tap /cards to show cards"
         ).format(
             player.mention_markdown,
             cards_table,

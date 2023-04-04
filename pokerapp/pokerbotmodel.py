@@ -109,7 +109,8 @@ class PokerBotModel:
                 chat_id=chat_id,
                 message_id=update.effective_message.message_id,
                 text=f"You are already ready {update.effective_user.username}. "
-                     f"{len(game.players)} player{'s are' if len(game.players) != 1 else ' is'} ready."
+                     f"{len(game.players)} player{'s are' if len(game.players) != 1 else ' is'} ready. "
+                     f"{'Tap /start to start.' if len(game.players) > 1 else ''}"
             )
             return
 
@@ -142,7 +143,8 @@ class PokerBotModel:
             chat_id=chat_id,
             message_id=update.effective_message.message_id,
             text=f"You are ready now {update.effective_user.username}. "
-                 f"{players_active} player{'s are' if players_active != 1 else ' is'} ready."
+                 f"{players_active} player{'s are' if players_active != 1 else ' is'} ready. "
+                 f"{'Tap /start to start.' if players_active > 1 else ''}"
         )
         return
 

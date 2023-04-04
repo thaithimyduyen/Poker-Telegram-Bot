@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from telegram import Update
+from telegram import Update, BotCommand
 from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
@@ -16,24 +16,19 @@ class PokerBotCotroller:
     def __init__(self, model: PokerBotModel, updater: Updater):
         self._model = model
 
-        updater.dispatcher.add_handler(
-            CommandHandler('ready', self._handle_ready)
-        )
-        updater.dispatcher.add_handler(
-            CommandHandler('start', self._handle_start)
-        )
-        updater.dispatcher.add_handler(
-            CommandHandler('stop', self._handle_stop)
-        )
-        updater.dispatcher.add_handler(
-            CommandHandler('money', self._handle_money)
-        )
-        updater.dispatcher.add_handler(
-            CommandHandler('ban', self._handle_ban)
-        )
-        updater.dispatcher.add_handler(
-            CommandHandler('cards', self._handle_cards)
-        )
+        commands = [
+            ('ready', 'Ready to play.', self._handle_ready),
+            ('start', 'Start new game.', self._handle_start),
+            ('stop', 'Stop current game.', self._handle_stop),
+            ('money', 'Show your money.', self._handle_money),
+            ('ban', 'Ban user.', self._handle_ban),
+            ('cards', 'Show your cards.', self._handle_cards),
+        ]
+
+        model._bot.set_my_commands(list(map(lambda e: BotCommand('/' + e[0], e[1]), commands)))
+
+        list(map(lambda e: updater.dispatcher.add_handler(CommandHandler(e[0], e[2])), commands))
+
         updater.dispatcher.add_handler(
             CallbackQueryHandler(
                 self._model.middleware_user_turn(
