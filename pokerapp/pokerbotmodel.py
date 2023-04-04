@@ -9,10 +9,8 @@ import redis
 from telegram import Message, ReplyKeyboardMarkup, Update, Bot
 from telegram.ext import Handler, CallbackContext
 
-from pokerapp.config import Config
-from pokerapp.privatechatmodel import UserPrivateChatModel
-from pokerapp.winnerdetermination import WinnerDetermination
 from pokerapp.cards import Cards
+from pokerapp.config import Config
 from pokerapp.entities import (
     Game,
     GameState,
@@ -27,7 +25,8 @@ from pokerapp.entities import (
     Wallet,
 )
 from pokerapp.pokerbotview import PokerBotViewer
-
+from pokerapp.privatechatmodel import UserPrivateChatModel
+from pokerapp.winnerdetermination import WinnerDetermination
 
 DICE_MULT = 10
 DICE_DELAY_SEC = 5
@@ -109,7 +108,8 @@ class PokerBotModel:
             self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=update.effective_message.message_id,
-                text="You are already ready",
+                text=f"You are already ready {update.effective_user.username}. "
+                     f"{len(game.players)} player{'s are' if len(game.players) != 1 else ' is'} ready."
             )
             return
 
@@ -137,6 +137,14 @@ class PokerBotModel:
         if players_active == members_count - 1 and \
                 players_active >= self._min_players:
             self._start_game(context=context, game=game, chat_id=chat_id)
+
+        self._view.send_message_reply(
+            chat_id=chat_id,
+            message_id=update.effective_message.message_id,
+            text=f"You are ready now {update.effective_user.username}. "
+                 f"{players_active} player{'s are' if players_active != 1 else ' is'} ready."
+        )
+        return
 
     def stop(self, user_id: UserId) -> None:
         UserPrivateChatModel(user_id=user_id, kv=self._kv).delete()
