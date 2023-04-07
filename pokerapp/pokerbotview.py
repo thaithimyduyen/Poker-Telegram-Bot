@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from io import BytesIO
+
 from telegram import (
     Message,
     ParseMode,
@@ -9,10 +11,9 @@ from telegram import (
     Bot,
     InputMediaPhoto,
 )
-from io import BytesIO
 
-from pokerapp.desk import DeskImageGenerator
 from pokerapp.cards import Cards
+from pokerapp.desk import DeskImageGenerator
 from pokerapp.entities import (
     Game,
     Player,
@@ -128,20 +129,22 @@ class PokerBotViewer:
                 text=check_call_action.value,
                 callback_data=check_call_action.value,
             ),
-        ], [
-            InlineKeyboardButton(
-                text=str(PlayerAction.SMALL.value) + "$",
-                callback_data=str(PlayerAction.SMALL.value)
-            ),
-            InlineKeyboardButton(
-                text=str(PlayerAction.NORMAL.value) + "$",
-                callback_data=str(PlayerAction.NORMAL.value)
-            ),
-            InlineKeyboardButton(
-                text=str(PlayerAction.BIG.value) + "$",
-                callback_data=str(PlayerAction.BIG.value)
-            ),
-        ]]
+        ], [InlineKeyboardButton(text=f'{action.value}$', callback_data=str(action.value)) for action in
+            [
+                PlayerAction.BET_TEN,
+                PlayerAction.BET_TWENTY_FIVE,
+                PlayerAction.BET_FIFTY,
+            ]
+            ],
+            [InlineKeyboardButton(text=f'{action.value}$', callback_data=str(action.value)) for action in
+             [
+                 PlayerAction.BET_ONE_HUNDRED,
+                 PlayerAction.BET_TWO_HUNDRED_FIFTY,
+                 PlayerAction.BET_FIVE_HUNDRED,
+                 PlayerAction.BET_ONE_THOUSAND,
+             ]
+             ],
+        ]
 
         return InlineKeyboardMarkup(
             inline_keyboard=keyboard

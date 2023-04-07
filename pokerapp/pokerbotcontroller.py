@@ -74,15 +74,23 @@ class PokerBotController:
             self._model.call_check(update, context)
         elif query_data == PlayerAction.FOLD.value:
             self._model.fold(update, context)
-        elif query_data == str(PlayerAction.SMALL.value):
+        elif query_data == str(PlayerAction.BET_TEN.value):
             self._model.raise_rate_bet(
-                update, context, PlayerAction.SMALL
+                update, context, PlayerAction.BET_TEN
             )
-        elif query_data == str(PlayerAction.NORMAL.value):
+        elif query_data == str(PlayerAction.BET_TWENTY_FIVE.value):
             self._model.raise_rate_bet(
-                update, context, PlayerAction.NORMAL
+                update, context, PlayerAction.BET_TWENTY_FIVE
             )
-        elif query_data == str(PlayerAction.BIG.value):
-            self._model.raise_rate_bet(update, context, PlayerAction.BIG)
+        elif query_data == str(PlayerAction.BET_FIFTY.value):
+            self._model.raise_rate_bet(update, context, PlayerAction.BET_FIFTY)
+        elif query_data == str(PlayerAction.BET_ONE_HUNDRED.value):
+            self._model.raise_rate_bet(update, context, PlayerAction.BET_ONE_HUNDRED)
+        elif query_data == str(PlayerAction.BET_TWO_HUNDRED_FIFTY.value):
+            self._model.raise_rate_bet(update, context, PlayerAction.BET_TWO_HUNDRED_FIFTY)
+        elif query_data == str(PlayerAction.BET_FIVE_HUNDRED.value):
+            self._model.raise_rate_bet(update, context, PlayerAction.BET_FIVE_HUNDRED)
+        elif query_data == str(PlayerAction.BET_ONE_THOUSAND.value):
+            self._model.raise_rate_bet(update, context, PlayerAction.BET_ONE_THOUSAND)
         elif query_data == PlayerAction.ALL_IN.value:
             self._model.all_in(update, context)
