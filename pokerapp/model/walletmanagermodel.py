@@ -2,7 +2,9 @@ import datetime
 
 import redis
 
-from pokerapp.entities import Wallet, UserId, Money, UserException
+from pokerapp.entity.entities import UserId, Money
+from pokerapp.entity.userexception import UserException
+from pokerapp.entity.wallet import Wallet
 
 DEFAULT_MONEY = 1000
 

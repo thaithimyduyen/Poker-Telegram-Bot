@@ -4,10 +4,11 @@ import enum
 from itertools import combinations
 from typing import Dict, List, Tuple
 
-from pokerapp.cards import Card, Cards
-from pokerapp.entities import Player, Score
+from pokerapp.entity.cards import Card, Cards
+from pokerapp.entity.entities import Score
+from pokerapp.entity.player import Player
 
-HAND_RANK = 15**5
+HAND_RANK = 15 ** 5
 
 
 class HandsOfPoker(enum.Enum):

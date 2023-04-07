@@ -6,11 +6,15 @@ from unittest.mock import MagicMock
 from telegram import Bot, Update
 from telegram.ext import CallbackContext
 
-from pokerapp.cards import Cards, get_cards
 from pokerapp.config import Config
-from pokerapp.entities import Player, Game, PlayerBet, GameState, Wallet
-from pokerapp.pokerbotmodel import PokerBotModel
-from pokerapp.pokerbotview import PokerBotViewer
+from pokerapp.entity.cards import Cards, get_cards
+from pokerapp.entity.game import Game
+from pokerapp.entity.gamestate import GameState
+from pokerapp.entity.player import Player
+from pokerapp.entity.playerbet import PlayerBet
+from pokerapp.entity.wallet import Wallet
+from pokerapp.model.pokerbotmodel import PokerBotModel
+from pokerapp.view.pokerbotview import PokerBotViewer
 
 HANDS_FILE = "./tests/hands.txt"
 

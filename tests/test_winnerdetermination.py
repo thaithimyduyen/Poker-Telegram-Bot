@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import unittest
-
 from typing import Tuple
 
-from pokerapp.cards import Cards, Card
-from pokerapp.winnerdetermination import WinnerDetermination
-
+from pokerapp.entity.cards import Cards, Card
+from pokerapp.model.winnerdetermination import WinnerDetermination
 
 HANDS_FILE = "./hands.txt"
 

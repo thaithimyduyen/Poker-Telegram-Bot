@@ -3,7 +3,7 @@ from typing import Union
 
 import redis
 
-from pokerapp.entities import (
+from pokerapp.entity.entities import (
     ChatId,
     MessageId,
     UserId,

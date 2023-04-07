@@ -12,17 +12,17 @@ from telegram import (
     InputMediaPhoto,
 )
 
-from pokerapp.cards import Cards
-from pokerapp.desk import DeskImageGenerator
-from pokerapp.entities import (
-    Game,
-    Player,
-    PlayerAction,
+from pokerapp.entity.cards import Cards
+from pokerapp.entity.entities import (
     MessageId,
     ChatId,
     Mention,
     Money,
 )
+from pokerapp.entity.game import Game
+from pokerapp.entity.player import Player
+from pokerapp.entity.playeraction import PlayerAction
+from pokerapp.view.deskimagegenerator import DeskImageGenerator
 
 
 class PokerBotViewer:
@@ -31,10 +31,10 @@ class PokerBotViewer:
         self._desk_generator = DeskImageGenerator()
 
     def send_message(
-        self,
-        chat_id: ChatId,
-        text: str,
-        reply_markup: ReplyKeyboardMarkup = None,
+            self,
+            chat_id: ChatId,
+            text: str,
+            reply_markup: ReplyKeyboardMarkup = None,
     ) -> None:
         self._bot.send_message(
             chat_id=chat_id,

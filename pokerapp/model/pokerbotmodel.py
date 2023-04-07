@@ -8,25 +8,25 @@ from typing import List
 from telegram import Message, ReplyKeyboardMarkup, Update, Bot
 from telegram.ext import Handler, CallbackContext
 
-from pokerapp.cards import Cards
 from pokerapp.config import Config
-from pokerapp.entities import (
-    Game,
-    GameState,
-    Player,
+from pokerapp.entity.cards import Cards
+from pokerapp.entity.entities import (
     ChatId,
     UserId,
-    UserException,
     Money,
-    PlayerAction,
-    PlayerState,
-    PlayerBet,
 )
-from pokerapp.pokerbotview import PokerBotViewer
-from pokerapp.privatechatmodel import UserPrivateChatModel
-from pokerapp.roundratemodel import RoundRateModel
-from pokerapp.walletmanagermodel import WalletManagerModel
-from pokerapp.winnerdetermination import WinnerDetermination
+from pokerapp.entity.game import Game
+from pokerapp.entity.gamestate import GameState
+from pokerapp.entity.player import Player
+from pokerapp.entity.playeraction import PlayerAction
+from pokerapp.entity.playerbet import PlayerBet
+from pokerapp.entity.playerstate import PlayerState
+from pokerapp.entity.userexception import UserException
+from pokerapp.model.privatechatmodel import UserPrivateChatModel
+from pokerapp.model.roundratemodel import RoundRateModel
+from pokerapp.model.walletmanagermodel import WalletManagerModel
+from pokerapp.model.winnerdetermination import WinnerDetermination
+from pokerapp.view.pokerbotview import PokerBotViewer
 
 DICE_MULT = 10
 DICE_DELAY_SEC = 5

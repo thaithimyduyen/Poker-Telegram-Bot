@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 
 
-from PIL import Image
 from pathlib import Path
 
-from pokerapp.cards import Cards, Card
+from PIL import Image
+
+from pokerapp.entity.cards import Cards, Card
 
 
 class DeskImageGenerator:
     def __init__(
-        self,
-        card_assets: Path = Path("./assets/cards"),
-        card_size=(84, 128),
-        padding=10,
+            self,
+            card_assets: Path = Path("./assets/cards"),
+            card_size=(84, 128),
+            padding=10,
     ):
         self._card_assets = card_assets
         self._file_suit_mapping = {

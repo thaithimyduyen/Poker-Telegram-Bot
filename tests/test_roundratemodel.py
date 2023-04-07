@@ -3,11 +3,13 @@ from typing import Tuple
 
 import redis
 
-from pokerapp.cards import Card, Cards
 from pokerapp.config import Config
-from pokerapp.entities import Game, Money, Player
-from pokerapp.roundratemodel import RoundRateModel
-from pokerapp.walletmanagermodel import WalletManagerModel
+from pokerapp.entity.cards import Card, Cards
+from pokerapp.entity.entities import Money
+from pokerapp.entity.game import Game
+from pokerapp.entity.player import Player
+from pokerapp.model.roundratemodel import RoundRateModel
+from pokerapp.model.walletmanagermodel import WalletManagerModel
 
 
 def with_cards(p: Player) -> Tuple[Player, Cards]:

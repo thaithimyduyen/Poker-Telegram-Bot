@@ -1,7 +1,10 @@
 from typing import List, Tuple, Dict
 
-from pokerapp.cards import Cards
-from pokerapp.entities import Game, Player, PlayerBet, Money, Score
+from pokerapp.entity.cards import Cards
+from pokerapp.entity.entities import Money, Score
+from pokerapp.entity.game import Game
+from pokerapp.entity.player import Player
+from pokerapp.entity.playerbet import PlayerBet
 
 SMALL_BLIND = 5
 

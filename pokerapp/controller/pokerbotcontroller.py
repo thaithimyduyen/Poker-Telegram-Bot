@@ -9,8 +9,8 @@ from telegram.ext import (
     Updater,
 )
 
-from pokerapp.entities import PlayerAction
-from pokerapp.pokerbotmodel import PokerBotModel
+from pokerapp.entity.playeraction import PlayerAction
+from pokerapp.model.pokerbotmodel import PokerBotModel
 
 
 class PokerBotController:
