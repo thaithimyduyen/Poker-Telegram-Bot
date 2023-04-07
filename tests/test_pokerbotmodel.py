@@ -2,14 +2,17 @@
 
 import unittest
 from typing import Tuple
+from unittest.mock import MagicMock
 
 import redis
+from telegram import Bot, Update
+from telegram.ext import CallbackContext
 
 from pokerapp.cards import Cards, Card
 from pokerapp.config import Config
-from pokerapp.entities import Money, Player, Game
-from pokerapp.pokerbotmodel import RoundRateModel, WalletManagerModel
-
+from pokerapp.entities import Money, Player, Game, PlayerBet, GameState, Wallet
+from pokerapp.pokerbotmodel import RoundRateModel, WalletManagerModel, PokerBotModel
+from pokerapp.pokerbotview import PokerBotViewer
 
 HANDS_FILE = "./tests/hands.txt"
 
@@ -169,6 +172,48 @@ class TestRoundRateModel(unittest.TestCase):
         self.assert_authorized_money_zero(
             g.id, first_winner, second_winner, third_loser, fourth_loser
         )
+
+
+class TestPokerBotModel(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(TestPokerBotModel, self).__init__(*args, **kwargs)
+
+        self._model = PokerBotModel(MagicMock(spec=PokerBotViewer), MagicMock(spec=Bot), MagicMock(spec=Config), None)
+
+    def test_reset_game(self):
+        game: Game = Game()
+
+        def create_player(user_id: str) -> Player:
+            player: Player = MagicMock(spec=Player)
+            player.user_id = user_id
+            player.wallet = MagicMock(spec=Wallet)
+            player.test_amount = 0
+            player.wallet.inc = lambda amount: setattr(player, 'test_amount', player.test_amount + amount)
+            return player
+
+        player_one: Player = create_player('1')
+        player_two: Player = create_player('2')
+        player_three: Player = create_player('3')
+        game.players = [player_one, player_two, player_three]
+
+        game.players_bets = [
+            PlayerBet(player_one.user_id, 2, GameState.ROUND_FLOP),
+            PlayerBet(player_one.user_id, 4, GameState.ROUND_RIVER),
+            PlayerBet(player_three.user_id, 10, GameState.ROUND_RIVER),
+        ]
+        self._model._game_from_context = lambda a: game
+
+        update = MagicMock(spec=Update)
+        context = MagicMock(spec=CallbackContext)
+
+        self.assertEqual(0, player_one.test_amount)
+        self.assertEqual(0, player_two.test_amount)
+        self.assertEqual(0, player_three.test_amount)
+        self._model.reset_game(update, context)
+        self.assertEqual(6, player_one.test_amount)
+        self.assertEqual(0, player_two.test_amount)
+        self.assertEqual(10, player_three.test_amount)
 
 
 if __name__ == '__main__':

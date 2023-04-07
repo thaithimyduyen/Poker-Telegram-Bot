@@ -23,6 +23,7 @@ from pokerapp.entities import (
     PlayerState,
     Score,
     Wallet,
+    PlayerBet,
 )
 from pokerapp.pokerbotview import PokerBotViewer
 from pokerapp.privatechatmodel import UserPrivateChatModel
@@ -188,7 +189,7 @@ class PokerBotModel:
         else:
             self._view.send_message(
                 chat_id=chat_id,
-                text="Not enough player"
+                text="Not enough player. Need players /ready to start."
             )
         return
 
@@ -276,15 +277,30 @@ class PokerBotModel:
                 chat_id=chat_id,
                 message_id=message_id,
                 text=f"Bonus: *{bonus}$* {icon}\n" +
-                f"Your money: *{money}$*\n",
+                     f"Your money: *{money}$*\n",
             )
 
         Timer(DICE_DELAY_SEC, print_bonus).start()
 
+    def reset_game(self, update: Update, context: CallbackContext) -> None:
+        game = self._game_from_context(context)
+
+        bets: List[PlayerBet] = game.players_bets
+        [player.wallet.inc(bet.amount)
+         for bet in bets
+         for player in game.players
+         if player.user_id == bet.user_id]
+
+        game.reset()
+        self._view.send_message(
+            chat_id=update.effective_message.chat_id,
+            text="The game is reset. Press /ready to start again.",
+        )
+
     def send_cards_to_user(
-        self,
-        update: Update,
-        context: CallbackContext,
+            self,
+            update: Update,
+            context: CallbackContext,
     ) -> None:
         game = self._game_from_context(context)
 
@@ -392,7 +408,7 @@ class PokerBotModel:
 
         current_player_money = current_player.wallet.value()
 
-        # Player do not have monery so make it ALL_IN.
+        # Player do not have money so make it ALL_IN.
         if current_player_money <= 0:
             current_player.state = PlayerState.ALL_IN
 
@@ -762,6 +778,8 @@ class RoundRateModel:
         )
         player.round_rate += amount
 
+        game.players_bets = game.players_bets + [PlayerBet(player.user_id, amount, game.state)]
+
         game.max_round_rate = player.round_rate
         game.trading_end_user_id = player.user_id
 
@@ -772,6 +790,9 @@ class RoundRateModel:
             game_id=game.id,
             amount=amount,
         )
+
+        game.players_bets = game.players_bets + [PlayerBet(player.user_id, amount, game.state)]
+
         player.round_rate += amount
 
     def all_in(self, game, player) -> Money:
@@ -782,6 +803,9 @@ class RoundRateModel:
         if game.max_round_rate < player.round_rate:
             game.max_round_rate = player.round_rate
             game.trading_end_user_id = player.user_id
+
+        game.players_bets = game.players_bets + [PlayerBet(player.user_id, amount, game.state)]
+
         return amount
 
     def _sum_authorized_money(

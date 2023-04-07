@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from abc import abstractmethod
-import enum
 import datetime
+import enum
+from abc import abstractmethod
 from typing import Tuple, List
 from uuid import uuid4
-from pokerapp.cards import get_cards
 
+from pokerapp.cards import get_cards
 
 MessageId = str
 ChatId = str
@@ -89,6 +89,7 @@ class Game:
         self.trading_end_user_id = 0
         self.ready_users = set()
         self.last_turn_time = datetime.datetime.now()
+        self.players_bets: List[PlayerBet] = []
 
     def players_by(self, states: Tuple[PlayerState]) -> List[Player]:
         return list(filter(lambda p: p.state in states, self.players))
@@ -104,6 +105,13 @@ class GameState(enum.Enum):
     ROUND_TURN = 3  # Four cards.
     ROUND_RIVER = 4  # Five cards.
     FINISHED = 5  # The end.
+
+
+class PlayerBet:
+    def __init__(self, user_id: UserId, amount: Money, game_state: GameState):
+        self.user_id = user_id
+        self.amount = amount
+        self.game_state = game_state
 
 
 class PlayerAction(enum.Enum):

@@ -12,7 +12,7 @@ from pokerapp.entities import PlayerAction
 from pokerapp.pokerbotmodel import PokerBotModel
 
 
-class PokerBotCotroller:
+class PokerBotController:
     def __init__(self, model: PokerBotModel, updater: Updater):
         self._model = model
 
@@ -23,6 +23,7 @@ class PokerBotCotroller:
             ('money', 'Show your money.', self._handle_money),
             ('ban', 'Ban user.', self._handle_ban),
             ('cards', 'Show your cards.', self._handle_cards),
+            ('reset_game', 'Reset game and refund players', self._reset_game),
         ]
 
         model._bot.set_my_commands(list(map(lambda e: BotCommand('/' + e[0], e[1]), commands)))
@@ -58,10 +59,13 @@ class PokerBotCotroller:
     def _handle_money(self, update: Update, context: CallbackContext) -> None:
         self._model.bonus(update, context)
 
+    def _reset_game(self, update: Update, context: CallbackContext) -> None:
+        self._model.reset_game(update, context)
+
     def _handle_button_clicked(
-        self,
-        update: Update,
-        context: CallbackContext,
+            self,
+            update: Update,
+            context: CallbackContext,
     ) -> None:
         query_data = update.callback_query.data
         if query_data == PlayerAction.CHECK.value:

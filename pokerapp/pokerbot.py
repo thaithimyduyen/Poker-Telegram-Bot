@@ -22,7 +22,7 @@ from telegram.error import (
 )
 
 from pokerapp.config import Config
-from pokerapp.pokerbotcontrol import PokerBotCotroller
+from pokerapp.pokerbotcontroller import PokerBotController
 from pokerapp.pokerbotmodel import PokerBotModel
 from pokerapp.pokerbotview import PokerBotViewer
 from pokerapp.entities import ChatId
@@ -63,7 +63,7 @@ class PokerBot:
             kv=kv,
             cfg=cfg,
         )
-        self._controller = PokerBotCotroller(self._model, self._updater)
+        self._controller = PokerBotController(self._model, self._updater)
 
     def run(self) -> None:
         self._updater.start_polling()
