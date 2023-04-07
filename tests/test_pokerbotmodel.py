@@ -8,7 +8,7 @@ import redis
 from telegram import Bot, Update
 from telegram.ext import CallbackContext
 
-from pokerapp.cards import Cards, Card
+from pokerapp.cards import Cards, Card, get_cards
 from pokerapp.config import Config
 from pokerapp.entities import Money, Player, Game, PlayerBet, GameState, Wallet
 from pokerapp.pokerbotmodel import RoundRateModel, WalletManagerModel, PokerBotModel
@@ -214,6 +214,39 @@ class TestPokerBotModel(unittest.TestCase):
         self.assertEqual(6, player_one.test_amount)
         self.assertEqual(0, player_two.test_amount)
         self.assertEqual(10, player_three.test_amount)
+
+    def test_create_final_result_text(self):
+        def create_player(mention_markdown, player_cards) -> Player:
+            player = MagicMock(spec=Player)
+            player.cards = [player_cards.pop(), player_cards.pop()]
+            player.mention_markdown = mention_markdown
+            return player
+
+        cards: Cards = get_cards()
+        cards.sort(key=lambda card: (card.rank, card.suit), reverse=True)
+
+        player_one: Player = create_player("Player 1", cards)
+
+        player_two: Player = create_player("Player 2", cards)
+
+        game: Game = MagicMock(spec=Game)
+        game.cards_table = [cards.pop(), cards.pop(), cards.pop(), cards.pop(), cards.pop()]
+
+        winners_hand_money = [[player_one, player_one.cards, 100]]
+
+        text = self._model._create_final_result_text([player_one, player_two], game, False, winners_hand_money)
+        self.assertEqual((
+            "Game is finished with result:\n\n"
+            f"Player 1:\nGOT: *100 $*\n"
+            "Final table:\n"
+            "2♠ 2♣ 2♥ 2♦ 3♠\n"
+            "Winning hand:\n"
+            "10♠ 10♣\n\n"
+            "All revealed hands:\n"
+            "Player 1: 10♠ 10♣\n"
+            "Player 2: 10♥ 10♦\n\n"
+            "/ready to continue"
+        ), text)
 
 
 if __name__ == '__main__':

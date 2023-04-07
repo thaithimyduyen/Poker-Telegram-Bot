@@ -461,7 +461,7 @@ class PokerBotModel:
             f"pot: {game.pot}"
         )
 
-        active_players = game.players_by(
+        active_players: list[Player] = game.players_by(
             states=(PlayerState.ACTIVE, PlayerState.ALL_IN)
         )
 
@@ -476,25 +476,36 @@ class PokerBotModel:
         )
 
         only_one_player = len(active_players) == 1
-        text = "Game is finished with result:\n\n"
-        for (player, best_hand, money) in winners_hand_money:
-            win_hand = " ".join(best_hand)
-            text += (
-                f"{player.mention_markdown}:\n" +
-                f"GOT: *{money} $*\n"
-            )
-            if not only_one_player:
-                text += (
-                    "With combination of cards:\n" +
-                    f"{win_hand}\n\n"
-                )
-        text += "/ready to continue"
-        self._view.send_message(chat_id=chat_id, text=text)
+        self._view.send_message(chat_id=chat_id, text=(
+            self._create_final_result_text(active_players, game, only_one_player, winners_hand_money)))
 
         for player in game.players:
             player.wallet.approve(game.id)
 
         game.reset()
+
+    @staticmethod
+    def _create_final_result_text(active_players, game, only_one_player, winners_hand_money):
+        text = "Game is finished with result:\n\n"
+        for (player, best_hand, money) in winners_hand_money:
+            win_hand = " ".join(best_hand)
+            text += (
+                    f"{player.mention_markdown}:\n" +
+                    f"GOT: *{money} $*\n"
+            )
+            if not only_one_player:
+                active_hands = '\n'.join(map(lambda p: f"{p.mention_markdown}: {' '.join(p.cards)}", active_players))
+
+                text += (
+                    f"Final table:\n"
+                    f"{' '.join(game.cards_table)}\n"
+                    f"Winning hand:\n"
+                    f"{win_hand}\n\n"
+                    f"All revealed hands:\n"
+                    f"{active_hands}"
+                )
+        text += "\n\n/ready to continue"
+        return text
 
     def _goto_next_round(self, game: Game, chat_id: ChatId) -> bool:
         # The state of the last player becomes ALL_IN at end of the round .
@@ -809,9 +820,9 @@ class RoundRateModel:
         return amount
 
     def _sum_authorized_money(
-        self,
-        game: Game,
-        players: List[Tuple[Player, Cards]],
+            self,
+            game: Game,
+            players: List[Tuple[Player, Cards]],
     ) -> int:
         sum_authorized_money = 0
         for player in players:
@@ -821,9 +832,9 @@ class RoundRateModel:
         return sum_authorized_money
 
     def finish_rate(
-        self,
-        game: Game,
-        player_scores: Dict[Score, List[Tuple[Player, Cards]]],
+            self,
+            game: Game,
+            player_scores: Dict[Score, List[Tuple[Player, Cards]]],
     ) -> List[Tuple[Player, Cards, Money]]:
         sorted_player_scores_items = sorted(
             player_scores.items(),

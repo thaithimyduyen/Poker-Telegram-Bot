@@ -8,7 +8,7 @@ from pokerapp.cards import Cards, Card
 from pokerapp.winnerdetermination import WinnerDetermination
 
 
-HANDS_FILE = "./tests/hands.txt"
+HANDS_FILE = "./hands.txt"
 
 
 class TestWinnerDetermination(unittest.TestCase):
