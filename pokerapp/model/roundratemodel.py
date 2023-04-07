@@ -4,16 +4,15 @@ from pokerapp.entity.cards import Cards
 from pokerapp.entity.entities import Money, Score
 from pokerapp.entity.game import Game
 from pokerapp.entity.player import Player
+from pokerapp.entity.playeraction import PlayerAction
 from pokerapp.entity.playerbet import PlayerBet
-
-SMALL_BLIND = 5
 
 
 class RoundRateModel:
 
     def round_pre_flop_rate_before_first_turn(self, game: Game) -> None:
-        self.raise_rate_bet(game, game.players[0], SMALL_BLIND)
-        self.raise_rate_bet(game, game.players[1], SMALL_BLIND)
+        self.raise_rate_bet(game, game.players[0], int(PlayerAction.BIG_BLIND.value / 2))
+        self.raise_rate_bet(game, game.players[1], PlayerAction.BIG_BLIND.value)
 
     def round_pre_flop_rate_after_first_turn(self, game: Game) -> None:
         dealer = 2 % len(game.players)

@@ -40,7 +40,6 @@ KEY_NOW_TIME_ADD_MONEY = "now_time"
 
 MAX_PLAYERS = 8
 MIN_PLAYERS = 2
-SMALL_BLIND = 5
 ONE_DAY = 86400
 MAX_TIME_FOR_TURN = datetime.timedelta(minutes=2)
 DESCRIPTION_FILE = "assets/description_bot.md"
@@ -120,7 +119,7 @@ class PokerBotModel:
             ready_message_id=update.effective_message.message_id,
         )
 
-        if player.wallet.value() < 2*SMALL_BLIND:
+        if player.wallet.value() < PlayerAction.BIG_BLIND.value:
             return self._view.send_message_reply(
                 chat_id=chat_id,
                 message_id=update.effective_message.message_id,
@@ -302,12 +301,19 @@ class PokerBotModel:
     ) -> None:
         game = self._game_from_context(context)
 
+        current_player = None
         for player in game.players:
             if player.user_id == update.effective_user.id:
                 current_player = player
                 break
 
         if current_player is None or not current_player.cards:
+            self._view.send_message(
+                chat_id=update.effective_message.chat_id,
+                text=f"{update.effective_message.from_user.mention_markdown()}" +
+                     (f", you are not in the game."
+                      if not game.state == GameState.INITIAL else f", the game is not started.")
+            )
             return
 
         self._view.send_cards(

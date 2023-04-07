@@ -77,13 +77,12 @@ class PokerBotController:
                 str(action.value): partial(
                     self._model.raise_rate_bet, update, context, action
                 ) for action in [
-                    PlayerAction.BET_TEN,
+                    PlayerAction.BIG_BLIND,
                     PlayerAction.BET_TWENTY_FIVE,
                     PlayerAction.BET_FIFTY,
                     PlayerAction.BET_ONE_HUNDRED,
                     PlayerAction.BET_TWO_HUNDRED_FIFTY,
                     PlayerAction.BET_FIVE_HUNDRED,
-                    PlayerAction.BET_ONE_THOUSAND,
                 ]
             }
         }

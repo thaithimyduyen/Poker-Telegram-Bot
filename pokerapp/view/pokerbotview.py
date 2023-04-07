@@ -112,38 +112,39 @@ class PokerBotViewer:
             resize_keyboard=True,
         )
 
-    @ staticmethod
+    @staticmethod
     def _get_turns_markup(
-        check_call_action: PlayerAction
+            check_call_action: PlayerAction
     ) -> InlineKeyboardMarkup:
-        keyboard = [[
-            InlineKeyboardButton(
-                text=PlayerAction.FOLD.value,
-                callback_data=PlayerAction.FOLD.value,
-            ),
-            InlineKeyboardButton(
-                text=PlayerAction.ALL_IN.value,
-                callback_data=PlayerAction.ALL_IN.value,
-            ),
-            InlineKeyboardButton(
-                text=check_call_action.value,
-                callback_data=check_call_action.value,
-            ),
-        ], [InlineKeyboardButton(text=f'{action.value}$', callback_data=str(action.value)) for action in
-            [
-                PlayerAction.BET_TEN,
-                PlayerAction.BET_TWENTY_FIVE,
-                PlayerAction.BET_FIFTY,
+
+        def create_inline_kb_btn_text(action: PlayerAction) -> str:
+            return f"{action.value}$ " \
+                   f"({'{:.1f}'.format(action.value / PlayerAction.BIG_BLIND.value).rstrip('0').rstrip('.')} BB)"
+
+        def create_inline_keyboard_buttons(actions):
+            return [
+                InlineKeyboardButton(text=create_inline_kb_btn_text(action), callback_data=str(action.value))
+                for action in actions
             ]
+
+        keyboard = [
+            [
+                InlineKeyboardButton(text=PlayerAction.FOLD.value, callback_data=PlayerAction.FOLD.value),
+                InlineKeyboardButton(text=PlayerAction.ALL_IN.value, callback_data=PlayerAction.ALL_IN.value),
+                InlineKeyboardButton(text=check_call_action.value, callback_data=check_call_action.value),
             ],
-            [InlineKeyboardButton(text=f'{action.value}$', callback_data=str(action.value)) for action in
-             [
-                 PlayerAction.BET_ONE_HUNDRED,
-                 PlayerAction.BET_TWO_HUNDRED_FIFTY,
-                 PlayerAction.BET_FIVE_HUNDRED,
-                 PlayerAction.BET_ONE_THOUSAND,
-             ]
-             ],
+            create_inline_keyboard_buttons([
+                PlayerAction.BIG_BLIND,
+                PlayerAction.BET_TWENTY_FIVE,
+            ]),
+            create_inline_keyboard_buttons([
+                PlayerAction.BET_FIFTY,
+                PlayerAction.BET_ONE_HUNDRED,
+            ]),
+            create_inline_keyboard_buttons([
+                PlayerAction.BET_TWO_HUNDRED_FIFTY,
+                PlayerAction.BET_FIVE_HUNDRED,
+            ]),
         ]
 
         return InlineKeyboardMarkup(
@@ -188,17 +189,14 @@ class PokerBotViewer:
         else:
             cards_table = " ".join(game.cards_table)
         text = (
-            "Turn of {}\n" +
-            "{}\n" +
-            "Money: *{}$*\n" +
-            "Max round rate: *{}$*\n" +
-            "Tap /cards to show cards"
-        ).format(
-            player.mention_markdown,
-            cards_table,
-            money,
-            game.max_round_rate,
+            f"Turn of {player.mention_markdown}\n"
+            f"{cards_table}\n"
+            f"Money: *{money}$* "
+            f"({'{:.1f}'.format(money / PlayerAction.BIG_BLIND.value).rstrip('0').rstrip('.')} BB)\n"
+            f"Max round rate: *{game.max_round_rate}$*\n"
+            f"Tap /cards to show cards"
         )
+
         check_call_action = PokerBotViewer.define_check_call_action(
             game, player
         )
