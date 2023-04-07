@@ -1,12 +1,17 @@
 import unittest
+from typing import Tuple
 
 import redis
 
+from pokerapp.cards import Card, Cards
 from pokerapp.config import Config
 from pokerapp.entities import Game, Money, Player
 from pokerapp.roundratemodel import RoundRateModel
 from pokerapp.walletmanagermodel import WalletManagerModel
-from tests.test_pokerbotmodel import with_cards
+
+
+def with_cards(p: Player) -> Tuple[Player, Cards]:
+    return (p, [Card("6♥"), Card("A♥"), Card("A♣"), Card("A♠")])
 
 
 class TestRoundRateModel(unittest.TestCase):

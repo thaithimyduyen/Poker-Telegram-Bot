@@ -684,6 +684,30 @@ class PokerBotModel:
         self._process_playing(chat_id=chat_id, game=game)
 
     def top_up(self, update, context):
-        pass
+        chat_id = update.effective_message.chat_id
 
+        wallet = WalletManagerModel(update.effective_message.from_user.id, self._kv)
+        if wallet.value() > 0:
+            self._view.send_message_reply(
+                chat_id=chat_id,
+                message_id=update.effective_message.message_id,
+                text="Your wallet is not empty. You can not top up it."
+            )
+            return
 
+        game = self._game_from_context(context)
+        if not game.state == GameState.INITIAL:
+            self._view.send_message_reply(
+                chat_id=chat_id,
+                message_id=update.effective_message.message_id,
+                text="Game is in progress. You can not top up your wallet."
+            )
+            return
+
+        top_up_amount = 1000
+        wallet.inc(top_up_amount)
+        self._view.send_message_reply(
+            chat_id=chat_id,
+            message_id=update.effective_message.message_id,
+            text=f"Your wallet is topped up with {top_up_amount} $"
+        )

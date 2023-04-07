@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 
 import unittest
-from typing import Tuple
 from unittest.mock import MagicMock
 
 from telegram import Bot, Update
 from telegram.ext import CallbackContext
 
-from pokerapp.cards import Cards, Card, get_cards
+from pokerapp.cards import Cards, get_cards
 from pokerapp.config import Config
 from pokerapp.entities import Player, Game, PlayerBet, GameState, Wallet
 from pokerapp.pokerbotmodel import PokerBotModel
 from pokerapp.pokerbotview import PokerBotViewer
 
 HANDS_FILE = "./tests/hands.txt"
-
-
-def with_cards(p: Player) -> Tuple[Player, Cards]:
-    return (p, [Card("6♥"), Card("A♥"), Card("A♣"), Card("A♠")])
 
 
 class TestPokerBotModel(unittest.TestCase):
@@ -56,7 +51,9 @@ class TestPokerBotModel(unittest.TestCase):
         self.assertEqual(0, player_one.test_amount)
         self.assertEqual(0, player_two.test_amount)
         self.assertEqual(0, player_three.test_amount)
+
         self._model.reset_game(update, context)
+
         self.assertEqual(6, player_one.test_amount)
         self.assertEqual(0, player_two.test_amount)
         self.assertEqual(10, player_three.test_amount)
@@ -81,6 +78,7 @@ class TestPokerBotModel(unittest.TestCase):
         winners_hand_money = [[player_one, player_one.cards, 100]]
 
         text = self._model._create_final_result_text([player_one, player_two], game, False, winners_hand_money)
+
         self.assertEqual((
             "Game is finished with result:\n\n"
             f"Player 1:\nGOT: *100 $*\n"
@@ -94,6 +92,89 @@ class TestPokerBotModel(unittest.TestCase):
             "/ready to continue"
         ), text)
 
+    def test_top_up(self):
+        model = self._model
+
+        kv = MagicMock(spec=dict)
+        kv.get = lambda key: 0
+        kv.topped_up_amount = 0
+        kv.incrby = lambda name, amount: setattr(kv, 'topped_up_amount', amount)
+        model._kv = kv
+
+        model._game_from_context = lambda a: Game()
+
+        view = MagicMock(spec=PokerBotViewer)
+        model._view = view
+
+        view.text = ''
+        model._view.send_message_reply = lambda chat_id, message_id, text: setattr(view, 'text', text)
+
+        update = MagicMock(spec=Update)
+        context = MagicMock(spec=CallbackContext)
+
+        self.assertEqual('', view.text)
+
+        model.top_up(update, context)
+
+        self.assertEqual(1000, kv.topped_up_amount)
+        self.assertEqual('Your wallet is topped up with 1000 $', view.text)
+
+    def test_top_up__should_not_top_up_when_wallet_not_empty(self):
+        model = self._model
+
+        kv = MagicMock(spec=dict)
+        kv.get = lambda key: 1
+        kv.topped_up_amount = 0
+        kv.incrby = lambda name, amount: setattr(kv, 'topped_up_amount', amount)
+        model._kv = kv
+
+        model._game_from_context = lambda a: Game()
+
+        view = MagicMock(spec=PokerBotViewer)
+        model._view = view
+
+        view.text = ''
+        model._view.send_message_reply = lambda chat_id, message_id, text: setattr(view, 'text', text)
+
+        update = MagicMock(spec=Update)
+        context = MagicMock(spec=CallbackContext)
+
+        self.assertEqual('', view.text)
+
+        model.top_up(update, context)
+
+        self.assertEqual(0, kv.topped_up_amount)
+        self.assertEqual('Your wallet is not empty. You can not top up it.', view.text)
+
+    def test_top_up__should_not_top_up_when_game_in_progress(self):
+        model = self._model
+
+        kv = MagicMock(spec=dict)
+        kv.get = lambda key: 0
+        kv.topped_up_amount = 0
+        kv.incrby = lambda name, amount: setattr(kv, 'topped_up_amount', amount)
+        model._kv = kv
+
+        game = Game()
+        game.state = GameState.ROUND_PRE_FLOP
+
+        model._game_from_context = lambda a: game
+
+        view = MagicMock(spec=PokerBotViewer)
+        model._view = view
+
+        view.text = ''
+        model._view.send_message_reply = lambda chat_id, message_id, text: setattr(view, 'text', text)
+
+        update = MagicMock(spec=Update)
+        context = MagicMock(spec=CallbackContext)
+
+        self.assertEqual('', view.text)
+
+        model.top_up(update, context)
+
+        self.assertEqual(0, kv.topped_up_amount)
+        self.assertEqual('Game is in progress. You can not top up your wallet.', view.text)
 
 if __name__ == '__main__':
     unittest.main()
