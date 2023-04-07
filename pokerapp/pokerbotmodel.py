@@ -3,9 +3,8 @@
 import datetime
 import traceback
 from threading import Timer
-from typing import List, Tuple, Dict
+from typing import List
 
-import redis
 from telegram import Message, ReplyKeyboardMarkup, Update, Bot
 from telegram.ext import Handler, CallbackContext
 
@@ -21,12 +20,12 @@ from pokerapp.entities import (
     Money,
     PlayerAction,
     PlayerState,
-    Score,
-    Wallet,
     PlayerBet,
 )
 from pokerapp.pokerbotview import PokerBotViewer
 from pokerapp.privatechatmodel import UserPrivateChatModel
+from pokerapp.roundratemodel import RoundRateModel
+from pokerapp.walletmanagermodel import WalletManagerModel
 from pokerapp.winnerdetermination import WinnerDetermination
 
 DICE_MULT = 10
@@ -43,7 +42,6 @@ MAX_PLAYERS = 8
 MIN_PLAYERS = 2
 SMALL_BLIND = 5
 ONE_DAY = 86400
-DEFAULT_MONEY = 1000
 MAX_TIME_FOR_TURN = datetime.timedelta(minutes=2)
 DESCRIPTION_FILE = "assets/description_bot.md"
 
@@ -685,198 +683,7 @@ class PokerBotModel:
         player.state = PlayerState.ALL_IN
         self._process_playing(chat_id=chat_id, game=game)
 
-
-class WalletManagerModel(Wallet):
-    def __init__(self, user_id: UserId, kv: redis.Redis):
-        self.user_id = user_id
-        self._kv = kv
-
-        key = self._prefix(self.user_id)
-        if self._kv.get(key) is None:
-            self._kv.set(key, DEFAULT_MONEY)
-
-    @staticmethod
-    def _prefix(id: int, suffix: str = ""):
-        return "pokerbot:" + str(id) + suffix
-
-    def _current_date(self) -> str:
-        return datetime.datetime.utcnow().strftime("%d/%m/%y")
-
-    def _key_daily(self) -> str:
-        return self._prefix(self.user_id, ":daily")
-
-    def has_daily_bonus(self) -> bool:
-        current_date = self._current_date()
-        last_date = self._kv.get(self._key_daily())
-
-        return last_date is not None and \
-            last_date.decode("utf-8") == current_date
-
-    def add_daily(self, amount: Money) -> Money:
-        if self.has_daily_bonus():
-            raise UserException(
-                "You have already received the bonus today\n"
-                f"Your money: {self.value()}$"
-            )
-
-        key = self._prefix(self.user_id)
-        self._kv.set(self._key_daily(), self._current_date())
-
-        return self._kv.incrby(key, amount)
-
-    def inc(self, amount: Money = 0) -> None:
-        """ Increase count of money in the wallet.
-            Decrease authorized money.
-        """
-        wallet = int(self._kv.get(self._prefix(self.user_id)))
-
-        if wallet + amount < 0:
-            raise UserException("not enough money")
-
-        self._kv.incrby(self._prefix(self.user_id), amount)
-
-    def inc_authorized_money(
-        self,
-        game_id: str,
-        amount: Money
-    ) -> None:
-        key_authorized_money = self._prefix(self.user_id, ":" + game_id)
-        self._kv.incrby(key_authorized_money, amount)
-
-    def authorized_money(self, game_id: str) -> Money:
-        key_authorized_money = self._prefix(self.user_id, ":" + game_id)
-        return int(self._kv.get(key_authorized_money) or 0)
-
-    def authorize(self, game_id: str, amount: Money) -> None:
-        """ Decrease count of money. """
-        self.inc_authorized_money(game_id, amount)
-
-        return self.inc(-amount)
-
-    def authorize_all(self, game_id: str) -> Money:
-        """ Decrease all money of player. """
-        money = int(self._kv.get(self._prefix(self.user_id)))
-        self.inc_authorized_money(game_id, money)
-
-        self._kv.set(self._prefix(self.user_id), 0)
-        return money
-
-    def value(self) -> Money:
-        """ Get count of money in the wallet. """
-        return int(self._kv.get(self._prefix(self.user_id)))
-
-    def approve(self, game_id: str) -> None:
-        key_authorized_money = self._prefix(self.user_id, ":" + game_id)
-        self._kv.delete(key_authorized_money)
+    def top_up(self, update, context):
+        pass
 
 
-class RoundRateModel:
-
-    def round_pre_flop_rate_before_first_turn(self, game: Game) -> None:
-        self.raise_rate_bet(game, game.players[0], SMALL_BLIND)
-        self.raise_rate_bet(game, game.players[1], SMALL_BLIND)
-
-    def round_pre_flop_rate_after_first_turn(self, game: Game) -> None:
-        dealer = 2 % len(game.players)
-        game.trading_end_user_id = game.players[dealer].user_id
-
-    def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
-        amount += game.max_round_rate - player.round_rate
-
-        player.wallet.authorize(
-            game_id=game.id,
-            amount=amount,
-        )
-        player.round_rate += amount
-
-        game.players_bets = game.players_bets + [PlayerBet(player.user_id, amount, game.state)]
-
-        game.max_round_rate = player.round_rate
-        game.trading_end_user_id = player.user_id
-
-    def call_check(self, game, player) -> None:
-        amount = game.max_round_rate - player.round_rate
-
-        player.wallet.authorize(
-            game_id=game.id,
-            amount=amount,
-        )
-
-        game.players_bets = game.players_bets + [PlayerBet(player.user_id, amount, game.state)]
-
-        player.round_rate += amount
-
-    def all_in(self, game, player) -> Money:
-        amount = player.wallet.authorize_all(
-            game_id=game.id,
-        )
-        player.round_rate += amount
-        if game.max_round_rate < player.round_rate:
-            game.max_round_rate = player.round_rate
-            game.trading_end_user_id = player.user_id
-
-        game.players_bets = game.players_bets + [PlayerBet(player.user_id, amount, game.state)]
-
-        return amount
-
-    def _sum_authorized_money(
-            self,
-            game: Game,
-            players: List[Tuple[Player, Cards]],
-    ) -> int:
-        sum_authorized_money = 0
-        for player in players:
-            sum_authorized_money += player[0].wallet.authorized_money(
-                game_id=game.id,
-            )
-        return sum_authorized_money
-
-    def finish_rate(
-            self,
-            game: Game,
-            player_scores: Dict[Score, List[Tuple[Player, Cards]]],
-    ) -> List[Tuple[Player, Cards, Money]]:
-        sorted_player_scores_items = sorted(
-            player_scores.items(),
-            reverse=True,
-            key=lambda x: x[0],
-        )
-        player_scores_values = list(
-            map(lambda x: x[1], sorted_player_scores_items))
-
-        res = []
-        for win_players in player_scores_values:
-            players_authorized = self._sum_authorized_money(
-                game=game,
-                players=win_players,
-            )
-            if players_authorized <= 0:
-                continue
-
-            game_pot = game.pot
-            for win_player, best_hand in win_players:
-                if game.pot <= 0:
-                    break
-
-                authorized = win_player.wallet.authorized_money(
-                    game_id=game.id,
-                )
-
-                win_money_real = game_pot * (authorized / players_authorized)
-                win_money_real = round(win_money_real)
-
-                win_money_can_get = authorized * len(game.players)
-                win_money = min(win_money_real, win_money_can_get)
-
-                win_player.wallet.inc(win_money)
-                game.pot -= win_money
-                res.append((win_player, best_hand, win_money))
-
-        return res
-
-    def to_pot(self, game) -> None:
-        for p in game.players:
-            game.pot += p.round_rate
-            p.round_rate = 0
-        game.max_round_rate = 0
-        game.trading_end_user_id = game.players[0].user_id
