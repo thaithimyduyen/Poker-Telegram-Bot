@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from functools import partial
 
 from telegram import Update, BotCommand
 from telegram.ext import (
@@ -62,35 +63,27 @@ class PokerBotController:
     def _reset_game(self, update: Update, context: CallbackContext) -> None:
         self._model.reset_game(update, context)
 
-    def _handle_button_clicked(
-            self,
-            update: Update,
-            context: CallbackContext,
-    ) -> None:
+    def _handle_button_clicked(self, update: Update, context: CallbackContext) -> None:
+        actions = {
+            PlayerAction.CHECK.value: lambda: self._model.call_check(update, context),
+            PlayerAction.CALL.value: lambda: self._model.call_check(update, context),
+            PlayerAction.FOLD.value: lambda: self._model.fold(update, context),
+            PlayerAction.ALL_IN.value: lambda: self._model.all_in(update, context),
+            **{
+                str(action.value): partial(
+                    self._model.raise_rate_bet, update, context, action
+                ) for action in [
+                    PlayerAction.BET_TEN,
+                    PlayerAction.BET_TWENTY_FIVE,
+                    PlayerAction.BET_FIFTY,
+                    PlayerAction.BET_ONE_HUNDRED,
+                    PlayerAction.BET_TWO_HUNDRED_FIFTY,
+                    PlayerAction.BET_FIVE_HUNDRED,
+                    PlayerAction.BET_ONE_THOUSAND,
+                ]
+            }
+        }
+
         query_data = update.callback_query.data
-        if query_data == PlayerAction.CHECK.value:
-            self._model.call_check(update, context)
-        elif query_data == PlayerAction.CALL.value:
-            self._model.call_check(update, context)
-        elif query_data == PlayerAction.FOLD.value:
-            self._model.fold(update, context)
-        elif query_data == str(PlayerAction.BET_TEN.value):
-            self._model.raise_rate_bet(
-                update, context, PlayerAction.BET_TEN
-            )
-        elif query_data == str(PlayerAction.BET_TWENTY_FIVE.value):
-            self._model.raise_rate_bet(
-                update, context, PlayerAction.BET_TWENTY_FIVE
-            )
-        elif query_data == str(PlayerAction.BET_FIFTY.value):
-            self._model.raise_rate_bet(update, context, PlayerAction.BET_FIFTY)
-        elif query_data == str(PlayerAction.BET_ONE_HUNDRED.value):
-            self._model.raise_rate_bet(update, context, PlayerAction.BET_ONE_HUNDRED)
-        elif query_data == str(PlayerAction.BET_TWO_HUNDRED_FIFTY.value):
-            self._model.raise_rate_bet(update, context, PlayerAction.BET_TWO_HUNDRED_FIFTY)
-        elif query_data == str(PlayerAction.BET_FIVE_HUNDRED.value):
-            self._model.raise_rate_bet(update, context, PlayerAction.BET_FIVE_HUNDRED)
-        elif query_data == str(PlayerAction.BET_ONE_THOUSAND.value):
-            self._model.raise_rate_bet(update, context, PlayerAction.BET_ONE_THOUSAND)
-        elif query_data == PlayerAction.ALL_IN.value:
-            self._model.all_in(update, context)
+        if query_data in actions:
+            actions[query_data]()
