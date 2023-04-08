@@ -193,7 +193,9 @@ class PokerBotViewer:
             f"{cards_table}\n"
             f"Money: *{money}$* "
             f"({'{:.1f}'.format(money / PlayerAction.BIG_BLIND.value).rstrip('0').rstrip('.')} BB)\n"
-            f"Max round rate: *{game.max_round_rate}$*\n"
+            f"Pot size: *{sum(bet.amount for bet in game.players_bets)}$*\n"
+            f"Your $ in pot: "
+            f"*{sum(bet.amount for bet in game.players_bets if bet.user_id == player.user_id)}$*\n"
             f"Tap /cards to show cards"
         )
 

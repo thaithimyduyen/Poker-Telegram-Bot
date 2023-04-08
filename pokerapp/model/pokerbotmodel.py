@@ -632,7 +632,8 @@ class PokerBotModel:
             mention_markdown = self._current_turn_player(game).mention_markdown
             self._view.send_message(
                 chat_id=chat_id,
-                text=f"{mention_markdown} {action}"
+                text=f"{mention_markdown} {action}" if not action == PlayerAction.CALL.value else
+                f"{mention_markdown} calls for {amount}$"
             )
 
             self._round_rate.call_check(game, player)

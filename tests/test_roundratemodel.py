@@ -1,5 +1,6 @@
 import unittest
 from typing import Tuple
+from unittest.mock import MagicMock
 
 import redis
 
@@ -8,6 +9,8 @@ from pokerapp.entity.cards import Card, Cards
 from pokerapp.entity.entities import Money
 from pokerapp.entity.game import Game
 from pokerapp.entity.player import Player
+from pokerapp.entity.playeraction import PlayerAction
+from pokerapp.entity.wallet import Wallet
 from pokerapp.model.roundratemodel import RoundRateModel
 from pokerapp.model.walletmanagermodel import WalletManagerModel
 
@@ -46,9 +49,20 @@ class TestRoundRateModel(unittest.TestCase):
 
         return p
 
-    def _approve_all(self, game: Game) -> None:
+    @staticmethod
+    def _approve_all(game: Game) -> None:
         for player in game.players:
             player.wallet.approve(game.id)
+
+    @staticmethod
+    def _create_player(user_id: str) -> Player:
+        player: Player = MagicMock(spec=Player)
+        player.user_id = user_id
+        player.wallet = MagicMock(spec=Wallet)
+        player.bet_amount = 0
+        player.wallet.authorize = lambda game_id, amount: setattr(player, 'bet_amount', player.bet_amount + amount)
+        player.round_rate = 0
+        return player
 
     def assert_authorized_money_zero(self, game_id: str, *players: Player):
         for (i, p) in enumerate(players):
@@ -167,6 +181,52 @@ class TestRoundRateModel(unittest.TestCase):
         self.assert_authorized_money_zero(
             g.id, first_winner, second_winner, third_loser, fourth_loser
         )
+
+    def test_round_pre_flop_rate_before_first_turn(self):
+        g = Game()
+        player_one = self._create_player('1')
+        player_two = self._create_player('2')
+        player_three = self._create_player('3')
+        g.players = [
+            player_one,
+            player_two,
+            player_three,
+        ]
+
+        self.assertEqual(0, player_one.bet_amount)
+        self.assertEqual(0, player_two.bet_amount)
+        self.assertEqual(0, player_three.bet_amount)
+
+        self._round_rate.round_pre_flop_rate_before_first_turn(g)
+
+        self.assertEqual(PlayerAction.BIG_BLIND.value / 2, player_one.bet_amount)
+        self.assertEqual(PlayerAction.BIG_BLIND.value, player_two.bet_amount)
+        self.assertEqual(0, player_three.bet_amount)
+
+    def test_raise_rate_bet__preflop_raise_from_small_bling(self):
+        g = Game()
+        player_one = self._create_player('1')
+        player_two = self._create_player('2')
+        player_three = self._create_player('3')
+        g.players = [
+            player_one,
+            player_two,
+            player_three,
+        ]
+
+        self.assertEqual(0, player_one.bet_amount)
+        self.assertEqual(0, player_two.bet_amount)
+        self.assertEqual(0, player_three.bet_amount)
+
+        self._round_rate.round_pre_flop_rate_before_first_turn(g)
+
+        self.assertEqual(PlayerAction.BIG_BLIND.value / 2, player_one.bet_amount)
+        self.assertEqual(PlayerAction.BIG_BLIND.value, player_two.bet_amount)
+        self.assertEqual(0, player_three.bet_amount)
+
+        raise_amount = 10
+        self._round_rate.raise_rate_bet(g, player_one, raise_amount)
+        self.assertEqual(PlayerAction.BIG_BLIND.value + raise_amount, player_one.bet_amount)
 
 
 if __name__ == '__main__':

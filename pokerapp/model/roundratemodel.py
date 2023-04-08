@@ -11,8 +11,8 @@ from pokerapp.entity.playerbet import PlayerBet
 class RoundRateModel:
 
     def round_pre_flop_rate_before_first_turn(self, game: Game) -> None:
-        self.raise_rate_bet(game, game.players[0], int(PlayerAction.BIG_BLIND.value / 2))
-        self.raise_rate_bet(game, game.players[1], PlayerAction.BIG_BLIND.value)
+        self._bet(game, game.players[0], int(PlayerAction.BIG_BLIND.value / 2))
+        self._bet(game, game.players[1], PlayerAction.BIG_BLIND.value)
 
     def round_pre_flop_rate_after_first_turn(self, game: Game) -> None:
         dealer = 2 % len(game.players)
@@ -20,7 +20,10 @@ class RoundRateModel:
 
     def raise_rate_bet(self, game: Game, player: Player, amount: int) -> None:
         amount += game.max_round_rate - player.round_rate
+        self._bet(game, player, amount)
 
+    @staticmethod
+    def _bet(game: Game, player: Player, amount: int) -> None:
         player.wallet.authorize(
             game_id=game.id,
             amount=amount,
