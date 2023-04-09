@@ -69,12 +69,15 @@ class WinnerDetermination:
 
     def _check_hand_get_score(self, hand: Cards) -> Score:
         hand_values = sorted(self._make_values(hand))
+        ace_to_five_straight = [14, 2, 3, 4, 5]
+        hand_values = ace_to_five_straight if self.is_ace_to_five_straight(hand) else hand_values
+
         is_single_suit = len(set(self._make_suits(hand))) == 1
 
         grouped_values, grouped_keys = self._group_hand(hand_values)
 
         delta_pos = hand_values[-1] - hand_values[0]
-        is_sequence = (delta_pos == 4) and len(grouped_values) == 5
+        is_sequence = (delta_pos == 4) and len(grouped_values) == 5 or hand_values == ace_to_five_straight
 
         # ROYAL_FLUSH.
         if len(grouped_keys) == 5 and hand_values[0] == 10 and is_single_suit:
@@ -144,7 +147,7 @@ class WinnerDetermination:
             if hand_point > best_point:
                 best_hand = hand
                 best_point = hand_point
-        return (best_hand, best_point)
+        return list(best_hand), best_point
 
     def determinate_scores(
         self,
@@ -157,8 +160,17 @@ class WinnerDetermination:
             player_hands = self._make_combinations(player.cards + cards_table)
             best_hand, score = self._best_hand_score(player_hands)
 
+            sorted_best_hand = sorted(list(best_hand), key=lambda x: x.value)
+            if self.is_ace_to_five_straight(sorted_best_hand):
+                best_hand = sorted_best_hand[4:] + sorted_best_hand[0:4]
+
             if score not in res:
                 res[score] = []
             res[score].append((player, best_hand))
 
         return res
+
+    @staticmethod
+    def is_ace_to_five_straight(cards: Cards) -> bool:
+        sorted_cards = sorted(list(cards), key=lambda x: x.value)
+        return list(map(lambda c: c.value, sorted_cards)) == [2, 3, 4, 5, 14]

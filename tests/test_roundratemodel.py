@@ -56,9 +56,7 @@ class TestRoundRateModel(unittest.TestCase):
 
     @staticmethod
     def _create_player(user_id: str) -> Player:
-        player: Player = MagicMock(spec=Player)
-        player.user_id = user_id
-        player.wallet = MagicMock(spec=Wallet)
+        player: Player = Player(user_id, user_id, MagicMock(spec=Wallet), '0')
         player.bet_amount = 0
         player.wallet.authorize = lambda game_id, amount: setattr(player, 'bet_amount', player.bet_amount + amount)
         player.round_rate = 0
