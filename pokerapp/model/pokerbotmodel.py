@@ -506,9 +506,9 @@ class PokerBotModel:
                     f"Winning hand:\n"
                     f"{win_hand}\n\n"
                     f"All revealed hands:\n"
-                    f"{active_hands}"
+                    f"{active_hands}\n"
                 )
-        text += "\n\n/ready to continue"
+        text += "\n/ready to continue"
         return text
 
     def _goto_next_round(self, game: Game, chat_id: ChatId) -> bool:
