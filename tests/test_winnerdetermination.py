@@ -54,10 +54,16 @@ class TestWinnerDetermination(unittest.TestCase):
             got_best_hand = determinator._best_hand_score(hands)[0]
             self.assertListEqual(list1=got_best_hand, list2=hands[0])
 
-    def test_check_hand_get_score(self):
+    def test_check_hand_get_score_1(self):
         determinator = self.determinator
         hand = [Card('A♠'), Card('2♦'), Card('4♥'), Card('5♦'), Card('3♦')]
         self.assertEqual(3796880, determinator._check_hand_get_score(hand))
+
+    def test_check_hand_get_score_2(self):
+        hand_one = [Card('6♥'), Card('8♥'), Card('J♥'), Card('K♥'), Card('5♥')]
+        hand_two = [Card('6♥'), Card('8♥'), Card('J♥'), Card('K♥'), Card('Q♥')]
+        self.assertTrue(
+            self.determinator._check_hand_get_score(hand_two) > self.determinator._check_hand_get_score(hand_one))
 
     def test_determinate_scores_1(self):
         determinator = self.determinator

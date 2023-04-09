@@ -16,8 +16,6 @@ from pokerapp.entity.wallet import Wallet
 from pokerapp.model.pokerbotmodel import PokerBotModel
 from pokerapp.view.pokerbotview import PokerBotViewer
 
-HANDS_FILE = "./tests/hands.txt"
-
 
 class TestPokerBotModel(unittest.TestCase):
 

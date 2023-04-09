@@ -106,7 +106,7 @@ class WinnerDetermination:
         # FLUSH.
         elif is_single_suit:
             return self._calculate_hand_point(
-                [hand_values[-1]], HandsOfPoker.FLUSH
+                grouped_keys, HandsOfPoker.FLUSH
             )
 
         # STRAIGHTS.
