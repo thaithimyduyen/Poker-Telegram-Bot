@@ -4,3 +4,5 @@ pillow==9.5.0
 PySocks==1.7.1
 redis==4.5.4
 python-dotenv==1.0.0
+matplotlib==3.7.1
+numpy==1.24.2

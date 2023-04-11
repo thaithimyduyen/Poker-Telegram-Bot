@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from io import BytesIO
+from typing import Union
 
 from telegram import (
     Message,
@@ -11,6 +12,7 @@ from telegram import (
     Bot,
     InputMediaPhoto,
 )
+from telegram.utils.types import FileInput
 
 from pokerapp.entity.cards import Cards
 from pokerapp.entity.entities import (
@@ -45,11 +47,11 @@ class PokerBotViewer:
             disable_web_page_preview=True,
         )
 
-    def send_photo(self, chat_id: ChatId) -> None:
+    def send_photo(self, chat_id: ChatId, photo: Union[FileInput, 'PhotoSize']) -> None:
         # TODO: photo to args.
         self._bot.send_photo(
             chat_id=chat_id,
-            photo=open("./assets/poker_hand.jpg", 'rb'),
+            photo=photo,
             parse_mode=ParseMode.MARKDOWN,
             disable_notification=True,
         )

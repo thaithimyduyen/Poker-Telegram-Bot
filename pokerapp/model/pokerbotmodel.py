@@ -77,6 +77,8 @@ class PokerBotModel:
 
     @staticmethod
     def _current_turn_player(game: Game) -> Player:
+        assert len(game.players) > 0
+
         i = game.current_player_index % len(game.players)
         return game.players[i]
 
@@ -172,7 +174,7 @@ class PokerBotModel:
                 chat_id=chat_id,
                 text=text,
             )
-            self._view.send_photo(chat_id=chat_id)
+            self._view.send_photo(chat_id=chat_id, photo=open("./assets/poker_hand.jpg", 'rb'))
 
             if update.effective_chat.type == 'private':
                 UserPrivateChatModel(user_id=user_id, kv=self._kv) \
@@ -718,3 +720,14 @@ class PokerBotModel:
             message_id=update.effective_message.message_id,
             text=f"Your wallet is topped up with {top_up_amount} $"
         )
+
+    def show_table(self, update, context):
+        from pokerapp.utils.draw_poker_table import draw_poker_table
+
+        game = self._game_from_context(context)
+        chat_id = update.effective_message.chat_id
+        players = game.players
+        current_player = self._current_turn_player(game)
+
+        table_image = draw_poker_table(players=players, current_player=current_player)
+        self._view.send_photo(chat_id=chat_id, photo=table_image)

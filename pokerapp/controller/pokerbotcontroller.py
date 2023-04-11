@@ -26,6 +26,7 @@ class PokerBotController:
             ('cards', 'Show your cards.', self._handle_cards),
             ('reset_game', 'Reset game and refund players', self._reset_game),
             ('top_up', 'Top up your balance.', self._top_up),
+            ('table', 'Show the table.', self._show_table),
         ]
 
         model._bot.set_my_commands(list(map(lambda e: BotCommand('/' + e[0], e[1]), commands)))
@@ -66,6 +67,9 @@ class PokerBotController:
 
     def _top_up(self, update: Update, context: CallbackContext) -> None:
         self._model.top_up(update, context)
+
+    def _show_table(self, update: Update, context: CallbackContext) -> None:
+        self._model.show_table(update, context)
 
     def _handle_button_clicked(self, update: Update, context: CallbackContext) -> None:
         actions = {

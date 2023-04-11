@@ -7,7 +7,7 @@ class Config:
             "POKERBOT_REDIS_HOST",
             default="localhost",
         )
-        self.REDIS_PORT: str = int(os.getenv(
+        self.REDIS_PORT: int = int(os.getenv(
             "POKERBOT_REDIS_PORT",
             default="6379"
         ))
